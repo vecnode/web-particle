@@ -2,7 +2,7 @@
 // Copyright (C) 2026 vecnode
 
 use bevy::prelude::*;
-use crate::components::{FixCameraButton, CameraTopButton, CameraPositionText};
+use crate::components::{FixCameraButton, CameraTopButton, CameraPositionText, Motion1Button, ShowTrajectoryButton};
 use crate::constants::{UI_SIDEBAR_WIDTH_PERCENT, UI_FONT_SIZE, UI_PADDING};
 
 pub fn spawn_ui(mut commands: Commands) {
@@ -78,5 +78,61 @@ pub fn spawn_ui(mut commands: Commands) {
             },
             CameraPositionText,
         ));
+        
+        // Particle Controls text
+        parent.spawn((
+            Node {
+                margin: UiRect::top(Val::Px(30.0)),
+                ..default()
+            },
+        )).with_children(|text_parent| {
+            text_parent.spawn((
+                Text::new("Particle Controls"),
+                TextFont {
+                    font_size: UI_FONT_SIZE,
+                    ..default()
+                },
+            ));
+        });
+        
+        // Motion 1 button
+        parent.spawn((
+            Node {
+                margin: UiRect::top(Val::Px(10.0)),
+                padding: UiRect::all(Val::Px(5.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.9)),
+            Interaction::default(),
+            Motion1Button,
+        )).with_children(|button_parent| {
+            button_parent.spawn((
+                Text::new("Motion 1"),
+                TextFont {
+                    font_size: UI_FONT_SIZE,
+                    ..default()
+                },
+            ));
+        });
+        
+        // Show Trajectory button
+        parent.spawn((
+            Node {
+                margin: UiRect::top(Val::Px(10.0)),
+                padding: UiRect::all(Val::Px(5.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.9)),
+            Interaction::default(),
+            ShowTrajectoryButton,
+        )).with_children(|button_parent| {
+            button_parent.spawn((
+                Text::new("Show Trajectory"),
+                TextFont {
+                    font_size: UI_FONT_SIZE,
+                    ..default()
+                },
+            ));
+        });
     });
 }

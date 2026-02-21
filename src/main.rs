@@ -11,13 +11,17 @@ use bevy::camera_controller::free_camera::FreeCameraPlugin;
 
 use setup::*;
 use systems::*;
-use components::CameraViewChanged;
+use components::{CameraViewChanged, ParticleSelectionState, ParticlePositions, Motion1State, TrajectoryState};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(FreeCameraPlugin)
         .init_resource::<CameraViewChanged>()
+        .init_resource::<ParticleSelectionState>()
+        .init_resource::<ParticlePositions>()
+        .init_resource::<Motion1State>()
+        .init_resource::<TrajectoryState>()
         .add_systems(
             Startup,
             (
@@ -35,6 +39,10 @@ fn main() {
                 handle_camera_top_button,
                 update_camera_position_text,
                 handle_particle_selection,
+                handle_motion1_button,
+                animate_motion1_particles,
+                handle_show_trajectory_button,
+                update_trajectory_visualization,
             ),
         )
         .add_systems(

@@ -38,3 +38,8 @@ pub const BACK_LIGHT_ILLUMINANCE: f32 = 1500.0;
 pub const UI_SIDEBAR_WIDTH_PERCENT: f32 = 15.0;
 pub const UI_FONT_SIZE: f32 = 12.0;
 pub const UI_PADDING: f32 = 10.0;
+
+// Trajectory visualization constants
+pub const TRAJECTORY_CIRCLE_THICKNESS: f32 = 0.01;
+pub const TRAJECTORY_COLOR: Color = Color::srgba(0.0, 1.0, 1.0, 0.6); // Cyan with transparency
+

@@ -4,12 +4,13 @@
 use bevy::prelude::*;
 use bevy::camera_controller::free_camera::FreeCamera;
 use crate::constants::*;
-use crate::components::Particle;
+use crate::components::{Particle, ParticlePositions};
 
 pub fn spawn_particles(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut particle_positions: ResMut<ParticlePositions>,
 ) {
     let white_material = materials.add(COLOR_WHITE);
     
@@ -19,12 +20,16 @@ pub fn spawn_particles(
         let z = ((i * 23 + 11) % 100) as f32 / 100.0 * GRID_BOUNDS * 2.0 - GRID_BOUNDS;
         let y = ((i * 13 + 3) % 100) as f32 / 100.0 * 2.0; // Random height 0-2
         
-        commands.spawn((
+        let position = Vec3::new(x, y, z);
+        let entity = commands.spawn((
             Mesh3d(meshes.add(Sphere::new(PARTICLE_RADIUS))),
             MeshMaterial3d(white_material.clone()),
-            Transform::from_translation(Vec3::new(x, y, z)),
+            Transform::from_translation(position),
             Particle,
-        ));
+        )).id();
+        
+        // Store initial position in global state
+        particle_positions.positions.insert(entity, position);
     }
 }
 

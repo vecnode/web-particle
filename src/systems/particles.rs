@@ -4,6 +4,7 @@
 use bevy::prelude::*;
 use crate::components::{Particle, Selected};
 use crate::constants::{PARTICLE_RADIUS, COLOR_WHITE, COLOR_PURPLE};
+use crate::components::ParticleSelectionState;
 
 pub fn handle_particle_selection(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
@@ -13,6 +14,7 @@ pub fn handle_particle_selection(
     mut selected_query: Query<(Entity, &Transform, &mut MeshMaterial3d<StandardMaterial>), (With<Particle>, With<Selected>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
+    mut selection_state: ResMut<ParticleSelectionState>,
 ) {
     // Only handle clicks when mouse button is just released (not during camera drag)
     // This ensures we don't interfere with camera rotation
@@ -40,6 +42,7 @@ pub fn handle_particle_selection(
             &mut selected_query,
             &mut materials,
             &mut commands,
+            &mut selection_state,
         );
     }
 }
@@ -114,14 +117,17 @@ fn toggle_particle_selection(
     selected_query: &mut Query<(Entity, &Transform, &mut MeshMaterial3d<StandardMaterial>), (With<Particle>, With<Selected>)>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
     commands: &mut Commands,
+    selection_state: &mut ResMut<ParticleSelectionState>,
 ) {
     if let Ok((_, _, mut material)) = selected_query.get_mut(entity) {
         // Deselect: change to white
         material.0 = materials.add(COLOR_WHITE);
         commands.entity(entity).remove::<Selected>();
+        selection_state.selected_particles.remove(&entity);
     } else if let Ok((_, _, mut material)) = particle_query.get_mut(entity) {
         // Select: change to purple
         material.0 = materials.add(COLOR_PURPLE);
         commands.entity(entity).insert(Selected);
+        selection_state.selected_particles.insert(entity);
     }
 }
