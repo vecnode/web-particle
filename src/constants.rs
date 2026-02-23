@@ -43,3 +43,5 @@ pub const UI_PADDING: f32 = 10.0;
 pub const TRAJECTORY_CIRCLE_THICKNESS: f32 = 0.01;
 pub const TRAJECTORY_COLOR: Color = Color::srgba(0.0, 1.0, 1.0, 0.6); // Cyan with transparency
 
+// Selection box constants
+pub const SELECTION_BOX_COLOR: Color = Color::srgba(0.2, 0.5, 1.0, 0.2); // Semi-transparent blue

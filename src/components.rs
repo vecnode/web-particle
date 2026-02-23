@@ -64,3 +64,13 @@ impl Default for Motion1State {
 pub struct TrajectoryState {
     pub is_visible: bool,
 }
+
+#[derive(Component)]
+pub struct SelectionBox;
+
+#[derive(Resource, Default)]
+pub struct SelectionBoxState {
+    pub is_active: bool,
+    pub start_position: Option<Vec2>,
+    pub current_position: Option<Vec2>,
+}

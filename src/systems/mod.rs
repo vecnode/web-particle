@@ -6,10 +6,12 @@ use bevy::prelude::*;
 pub mod camera;
 pub mod particles;
 pub mod ui;
+pub mod selection;
 
 pub use camera::*;
 pub use particles::*;
 pub use ui::*;
+pub use selection::*;
 
 pub fn handle_motion1_button(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<crate::components::Motion1Button>)>,
