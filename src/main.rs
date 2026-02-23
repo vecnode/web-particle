@@ -14,7 +14,7 @@ use bevy_egui::{EguiPlugin, EguiGlobalSettings, PrimaryEguiContext, EguiPrimaryC
 use setup::*;
 use systems::*;
 use components::{CameraViewChanged, ParticleSelectionState, ParticlePositions, Motion1State, TrajectoryState, SelectionBoxState};
-use constants::WORLD_BACKGROUND_COLOR;
+use constants::{WORLD_BACKGROUND_COLOR, EGUI_TOP_BAR_HEIGHT, EGUI_SECOND_TOP_BAR_HEIGHT, EGUI_LEFT_PANEL_WIDTH, EGUI_RIGHT_PANEL_WIDTH};
 
 fn main() {
     App::new()
@@ -116,17 +116,18 @@ fn update_camera_viewports(
     let physical_size = window.physical_size();
     let scale_factor = window.scale_factor() as f32;
     
-    // Egui panel width (left side) and top bar height in physical pixels
-    let egui_panel_width = (200.0 * scale_factor) as u32;
-    let egui_top_bar_height = (30.0 * scale_factor) as u32;
+    // Egui panel widths (left and right) and top bars height in physical pixels
+    let egui_left_panel_width = (EGUI_LEFT_PANEL_WIDTH * scale_factor) as u32;
+    let egui_right_panel_width = (EGUI_RIGHT_PANEL_WIDTH * scale_factor) as u32;
+    let egui_top_bars_height = ((EGUI_TOP_BAR_HEIGHT + EGUI_SECOND_TOP_BAR_HEIGHT) * scale_factor) as u32;
     
-    // Camera viewport takes remaining space (right side, below top bar)
+    // Camera viewport takes remaining space (center, below both top bars, between left and right panels)
     if let Ok(mut camera) = right_camera.single_mut() {
         camera.viewport = Some(Viewport {
-            physical_position: UVec2::new(egui_panel_width, egui_top_bar_height),
+            physical_position: UVec2::new(egui_left_panel_width, egui_top_bars_height),
             physical_size: UVec2::new(
-                physical_size.x.saturating_sub(egui_panel_width),
-                physical_size.y.saturating_sub(egui_top_bar_height),
+                physical_size.x.saturating_sub(egui_left_panel_width).saturating_sub(egui_right_panel_width),
+                physical_size.y.saturating_sub(egui_top_bars_height),
             ),
             ..default()
         });

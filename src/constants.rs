@@ -43,3 +43,9 @@ pub const SELECTION_BOX_COLOR: Color = Color::srgba(0.2, 0.5, 1.0, 0.2); // Semi
 
 // World background color
 pub const WORLD_BACKGROUND_COLOR: Color = Color::srgb(0.5, 0.5, 0.5); // Light gray
+
+// UI layout constants
+pub const EGUI_TOP_BAR_HEIGHT: f32 = 20.0;
+pub const EGUI_SECOND_TOP_BAR_HEIGHT: f32 = 20.0;
+pub const EGUI_LEFT_PANEL_WIDTH: f32 = 200.0;
+pub const EGUI_RIGHT_PANEL_WIDTH: f32 = 200.0;
