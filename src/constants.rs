@@ -45,3 +45,6 @@ pub const TRAJECTORY_COLOR: Color = Color::srgba(0.0, 1.0, 1.0, 0.6); // Cyan wi
 
 // Selection box constants
 pub const SELECTION_BOX_COLOR: Color = Color::srgba(0.2, 0.5, 1.0, 0.2); // Semi-transparent blue
+
+// World background color
+pub const WORLD_BACKGROUND_COLOR: Color = Color::srgb(0.5, 0.5, 0.5); // Light gray

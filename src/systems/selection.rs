@@ -109,7 +109,29 @@ pub fn process_selection_box(
     }
     
     let Ok(window) = windows.single() else { return };
-    let Ok((camera, camera_transform)) = camera_query.single() else { return };
+    
+    // Find camera whose viewport contains the selection box center
+    let box_center = (start + end) * 0.5;
+    let cursor_physical = box_center * window.scale_factor() as f32;
+    
+    let mut selected_camera = None;
+    for (camera, camera_transform) in camera_query.iter() {
+        if let Some(viewport) = &camera.viewport {
+            let viewport_start = viewport.physical_position.as_vec2();
+            let viewport_end = viewport_start + viewport.physical_size.as_vec2();
+            if cursor_physical.x >= viewport_start.x && cursor_physical.x < viewport_end.x &&
+               cursor_physical.y >= viewport_start.y && cursor_physical.y < viewport_end.y {
+                selected_camera = Some((camera, camera_transform));
+                break;
+            }
+        } else {
+            // If no viewport, use this camera (fallback)
+            selected_camera = Some((camera, camera_transform));
+            break;
+        }
+    }
+    
+    let Some((camera, camera_transform)) = selected_camera else { return };
     
     let left = start.x.min(end.x);
     let right = start.x.max(end.x);

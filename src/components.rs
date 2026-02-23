@@ -74,3 +74,6 @@ pub struct SelectionBoxState {
     pub start_position: Option<Vec2>,
     pub current_position: Option<Vec2>,
 }
+
+#[derive(Component)]
+pub struct RightCamera;

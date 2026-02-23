@@ -18,17 +18,36 @@ pub fn handle_particle_selection(
 ) {
     // Only handle clicks when mouse button is just released (not during camera drag)
     // This ensures we don't interfere with camera rotation
+    // Note: bevy_egui automatically filters out input when cursor is over Egui UI
     if !mouse_button_input.just_released(MouseButton::Left) {
         return;
     }
     
     let Ok(window) = windows.single() else { return };
-    let Ok((camera, camera_transform)) = camera_query.single() else { return };
     
-    // Get mouse position
+    // Find camera whose viewport contains the cursor
+    let cursor_pos = window.cursor_position().unwrap_or_default();
+    let cursor_physical = cursor_pos * window.scale_factor() as f32;
+    
+    let mut selected_camera = None;
+    for (camera, camera_transform) in camera_query.iter() {
+        if let Some(viewport) = &camera.viewport {
+            let viewport_start = viewport.physical_position.as_vec2();
+            let viewport_end = viewport_start + viewport.physical_size.as_vec2();
+            if cursor_physical.x >= viewport_start.x && cursor_physical.x < viewport_end.x &&
+               cursor_physical.y >= viewport_start.y && cursor_physical.y < viewport_end.y {
+                selected_camera = Some((camera, camera_transform));
+                break;
+            }
+        }
+    }
+    
+    let Some((camera, camera_transform)) = selected_camera else { return };
+    
+    // Get mouse position relative to viewport
     let Some(cursor_pos) = window.cursor_position() else { return };
     
-    // Convert screen position to world ray - this works at any distance
+    // Convert screen position to world ray - viewport_to_world handles viewport offset automatically
     let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) else { return };
     
     // Find closest particle hit by ray

@@ -2,7 +2,6 @@
 // Copyright (C) 2026 vecnode
 
 use bevy::prelude::*;
-use bevy::camera_controller::free_camera::FreeCamera;
 use crate::constants::*;
 use crate::components::{Particle, ParticlePositions};
 
@@ -94,13 +93,6 @@ pub fn spawn_grid(
 }
 
 pub fn setup_camera_and_lights(mut commands: Commands) {
-    // Camera
-    commands.spawn((
-        Camera3d::default(),
-        Transform::from_translation(CAMERA_START_POSITION).looking_at(Vec3::ZERO, Vec3::Y),
-        FreeCamera::default(),
-    ));
-    
     // Front light
     commands.spawn(DirectionalLight {
         illuminance: FRONT_LIGHT_ILLUMINANCE,

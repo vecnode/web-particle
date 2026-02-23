@@ -7,11 +7,13 @@ pub mod camera;
 pub mod particles;
 pub mod ui;
 pub mod selection;
+pub mod egui_ui;
 
 pub use camera::*;
 pub use particles::*;
 pub use ui::*;
 pub use selection::*;
+pub use egui_ui::egui_controls_ui;
 
 pub fn handle_motion1_button(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<crate::components::Motion1Button>)>,

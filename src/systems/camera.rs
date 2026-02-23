@@ -13,7 +13,7 @@ pub fn handle_camera_button(
 ) {
     for interaction in interaction_query.iter() {
         if *interaction == Interaction::Pressed {
-            if let Ok((entity, mut transform, mut global_transform)) = camera_query.single_mut() {
+            for (entity, mut transform, mut global_transform) in camera_query.iter_mut() {
                 update_camera_view(&mut transform, &mut global_transform, entity, &mut camera_changed, CAMERA_FRONT_POSITION, Vec3::ZERO, Vec3::Y);
             }
         }
@@ -27,14 +27,14 @@ pub fn handle_camera_top_button(
 ) {
     for interaction in interaction_query.iter() {
         if *interaction == Interaction::Pressed {
-            if let Ok((entity, mut transform, mut global_transform)) = camera_query.single_mut() {
+            for (entity, mut transform, mut global_transform) in camera_query.iter_mut() {
                 update_camera_view(&mut transform, &mut global_transform, entity, &mut camera_changed, CAMERA_TOP_POSITION, Vec3::ZERO, Vec3::Z);
             }
         }
     }
 }
 
-fn update_camera_view(
+pub fn update_camera_view(
     transform: &mut Transform,
     global_transform: &mut GlobalTransform,
     entity: Entity,
@@ -85,7 +85,7 @@ pub fn reset_free_camera_after_view_change(
 }
 
 pub fn update_camera_position_text(
-    camera_query: Query<&Transform, With<Camera3d>>,
+    camera_query: Query<&Transform, (With<Camera3d>, With<crate::components::RightCamera>)>,
     mut text_query: Query<&mut Text, With<CameraPositionText>>,
 ) {
     if let Ok(transform) = camera_query.single() {
