@@ -9,26 +9,11 @@ pub struct Particle;
 #[derive(Component)]
 pub struct Selected;
 
-#[derive(Component)]
-pub struct FixCameraButton;
-
-#[derive(Component)]
-pub struct CameraTopButton;
-
-#[derive(Component)]
-pub struct CameraPositionText;
-
 #[derive(Resource, Default)]
 pub struct CameraViewChanged {
     pub needs_reset: bool,
     pub entity: Option<Entity>,
 }
-
-#[derive(Component)]
-pub struct Motion1Button;
-
-#[derive(Component)]
-pub struct ShowTrajectoryButton;
 
 #[derive(Component)]
 pub struct TrajectoryCircle {

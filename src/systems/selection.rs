@@ -8,11 +8,31 @@ use crate::constants::{SELECTION_BOX_COLOR, COLOR_PURPLE, COLOR_WHITE};
 pub fn handle_right_mouse_button(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
     mut selection_box_state: ResMut<SelectionBoxState>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Right) {
         let Ok(window) = windows.single() else { return };
-        if let Some(cursor_pos) = window.cursor_position() {
+        
+        // Only start selection if cursor is over the camera viewport (not over Egui panels)
+        let Some(cursor_pos) = window.cursor_position() else { return };
+        let cursor_physical = cursor_pos * window.scale_factor() as f32;
+        
+        // Check if cursor is within camera viewport
+        let mut is_in_viewport = false;
+        for (camera, _) in camera_query.iter() {
+            if let Some(viewport) = &camera.viewport {
+                let viewport_start = viewport.physical_position.as_vec2();
+                let viewport_end = viewport_start + viewport.physical_size.as_vec2();
+                if cursor_physical.x >= viewport_start.x && cursor_physical.x < viewport_end.x &&
+                   cursor_physical.y >= viewport_start.y && cursor_physical.y < viewport_end.y {
+                    is_in_viewport = true;
+                    break;
+                }
+            }
+        }
+        
+        if is_in_viewport {
             selection_box_state.is_active = true;
             selection_box_state.start_position = Some(cursor_pos);
             selection_box_state.current_position = Some(cursor_pos);
@@ -133,22 +153,36 @@ pub fn process_selection_box(
     
     let Some((camera, camera_transform)) = selected_camera else { return };
     
-    let left = start.x.min(end.x);
-    let right = start.x.max(end.x);
-    let top = start.y.min(end.y);
-    let bottom = start.y.max(end.y);
+    // Get viewport information for coordinate conversion
+    let viewport = camera.viewport.as_ref().expect("Camera should have viewport");
+    let viewport_physical_start = viewport.physical_position.as_vec2();
+    let viewport_physical_size = viewport.physical_size.as_vec2();
+    let scale_factor = window.scale_factor() as f32;
     
-    let window_size = Vec2::new(window.width(), window.height());
+    // Convert selection box coordinates from logical to physical, then to viewport-relative
+    let start_physical = start * scale_factor;
+    let end_physical = end * scale_factor;
+    
+    // Make coordinates relative to viewport
+    let left_physical = (start_physical.x.min(end_physical.x) - viewport_physical_start.x).max(0.0);
+    let right_physical = (start_physical.x.max(end_physical.x) - viewport_physical_start.x).min(viewport_physical_size.x);
+    let top_physical = (start_physical.y.min(end_physical.y) - viewport_physical_start.y).max(0.0);
+    let bottom_physical = (start_physical.y.max(end_physical.y) - viewport_physical_start.y).min(viewport_physical_size.y);
     
     for (entity, transform) in particle_query.iter() {
         let world_pos = transform.translation;
         
         let Some(ndc) = camera.world_to_ndc(camera_transform, world_pos) else { continue };
         
-        let screen_x = (ndc.x * 0.5 + 0.5) * window_size.x;
-        let screen_y = (1.0 - (ndc.y * 0.5 + 0.5)) * window_size.y;
+        // Convert NDC to viewport-relative screen coordinates
+        // NDC: -1 to 1, where (0,0) is center, (-1,-1) is bottom-left, (1,1) is top-right
+        // Screen: 0 to viewport_size, where (0,0) is top-left
+        let screen_x = (ndc.x * 0.5 + 0.5) * viewport_physical_size.x;
+        let screen_y = (1.0 - (ndc.y * 0.5 + 0.5)) * viewport_physical_size.y;
         
-        if screen_x >= left && screen_x <= right && screen_y >= top && screen_y <= bottom {
+        // Check if particle is within selection box (in viewport coordinates)
+        if screen_x >= left_physical && screen_x <= right_physical &&
+           screen_y >= top_physical && screen_y <= bottom_physical {
             if !particle_selection_state.selected_particles.contains(&entity) {
                 if let Ok((_, mut material)) = unselected_query.get_mut(entity) {
                     material.0 = materials.add(COLOR_PURPLE);

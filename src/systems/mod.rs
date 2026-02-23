@@ -5,47 +5,13 @@ use bevy::prelude::*;
 
 pub mod camera;
 pub mod particles;
-pub mod ui;
 pub mod selection;
 pub mod egui_ui;
 
-pub use camera::*;
+pub use camera::reset_free_camera_after_view_change;
 pub use particles::*;
-pub use ui::*;
 pub use selection::*;
 pub use egui_ui::egui_controls_ui;
-
-pub fn handle_motion1_button(
-    interaction_query: Query<&Interaction, (Changed<Interaction>, With<crate::components::Motion1Button>)>,
-    mut button_query: Query<&mut BackgroundColor, With<crate::components::Motion1Button>>,
-    mut motion1_state: ResMut<crate::components::Motion1State>,
-    particle_query: Query<&Transform, With<crate::components::Particle>>,
-    mut particle_positions: ResMut<crate::components::ParticlePositions>,
-    selection_state: Res<crate::components::ParticleSelectionState>,
-) {
-    for interaction in interaction_query.iter() {
-        if *interaction == Interaction::Pressed {
-            // Toggle animation state
-            motion1_state.is_active = !motion1_state.is_active;
-            
-            // Update button color
-            if let Ok(mut bg_color) = button_query.single_mut() {
-                if motion1_state.is_active {
-                    *bg_color = BackgroundColor(Color::srgba(0.0, 0.8, 0.0, 0.9)); // Green
-                } else {
-                    *bg_color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.9)); // Normal gray
-                    
-                    // When stopping, update global positions with current positions
-                    for entity in &selection_state.selected_particles {
-                        if let Ok(transform) = particle_query.get(*entity) {
-                            particle_positions.positions.insert(*entity, transform.translation);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 pub fn animate_motion1_particles(
     time: Res<Time>,
@@ -85,28 +51,6 @@ pub fn animate_motion1_particles(
                 
                 // Update global position state
                 particle_positions.positions.insert(*entity, transform.translation);
-            }
-        }
-    }
-}
-
-pub fn handle_show_trajectory_button(
-    interaction_query: Query<&Interaction, (Changed<Interaction>, With<crate::components::ShowTrajectoryButton>)>,
-    mut button_query: Query<&mut BackgroundColor, With<crate::components::ShowTrajectoryButton>>,
-    mut trajectory_state: ResMut<crate::components::TrajectoryState>,
-) {
-    for interaction in interaction_query.iter() {
-        if *interaction == Interaction::Pressed {
-            // Toggle trajectory visibility
-            trajectory_state.is_visible = !trajectory_state.is_visible;
-            
-            // Update button color
-            if let Ok(mut bg_color) = button_query.single_mut() {
-                if trajectory_state.is_visible {
-                    *bg_color = BackgroundColor(Color::srgba(0.0, 0.8, 0.0, 0.9)); // Green
-                } else {
-                    *bg_color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.9)); // Normal gray
-                }
             }
         }
     }
