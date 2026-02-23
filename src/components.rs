@@ -62,3 +62,16 @@ pub struct SelectionBoxState {
 
 #[derive(Component)]
 pub struct RightCamera;
+
+#[derive(Resource)]
+pub struct CameraProjectionState {
+    pub last_perspective_fov: f32, // Store FOV when switching to orthographic
+}
+
+impl Default for CameraProjectionState {
+    fn default() -> Self {
+        Self {
+            last_perspective_fov: 1.047, // Default ~60 degrees, will be updated from actual camera
+        }
+    }
+}

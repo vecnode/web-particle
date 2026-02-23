@@ -41,6 +41,7 @@ fn main() {
         .init_resource::<Motion1State>()
         .init_resource::<TrajectoryState>()
         .init_resource::<SelectionBoxState>()
+        .init_resource::<components::CameraProjectionState>()
         .add_systems(
             Startup,
             (
