@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
-use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState};
+use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState};
 use crate::constants::{CAMERA_FRONT_POSITION, CAMERA_TOP_POSITION, EGUI_TOP_BAR_HEIGHT, EGUI_SECOND_TOP_BAR_HEIGHT, EGUI_LEFT_PANEL_WIDTH, EGUI_RIGHT_PANEL_WIDTH};
 
 pub fn egui_controls_ui(
@@ -11,9 +11,13 @@ pub fn egui_controls_ui(
     selection_state: Res<ParticleSelectionState>,
     mut motion1_state: ResMut<Motion1State>,
     mut trajectory_state: ResMut<TrajectoryState>,
-    mut camera_query: Query<(Entity, &mut Transform, &mut GlobalTransform, &mut Projection), (With<bevy::prelude::Camera3d>, With<bevy::camera_controller::free_camera::FreeCamera>, With<crate::components::RightCamera>)>,
     mut camera_changed: ResMut<CameraViewChanged>,
     mut projection_state: ResMut<CameraProjectionState>,
+    mut layout_state: ResMut<EguiLayoutState>,
+    mut queries: ParamSet<(
+        Query<(Entity, &mut Transform, &mut GlobalTransform, &mut Projection), (With<bevy::prelude::Camera3d>, With<bevy::camera_controller::free_camera::FreeCamera>, With<crate::components::RightCamera>)>,
+        Query<&Transform, With<crate::components::Particle>>,
+    )>,
 ) {
     if let Ok(ctx) = contexts.ctx_mut() {
         // Top bar
@@ -50,7 +54,7 @@ pub fn egui_controls_ui(
                     // Camera controls section
                     ui.label("Camera Controls");
                     if ui.button("Camera Front").clicked() {
-                        if let Ok((entity, mut transform, mut global_transform, _)) = camera_query.single_mut() {
+                        if let Ok((entity, mut transform, mut global_transform, _)) = queries.p0().single_mut() {
                             transform.translation = CAMERA_FRONT_POSITION;
                             transform.look_at(Vec3::ZERO, Vec3::Y);
                             *global_transform = GlobalTransform::from(*transform);
@@ -60,7 +64,7 @@ pub fn egui_controls_ui(
                     }
                     
                     if ui.button("Camera Top").clicked() {
-                        if let Ok((entity, mut transform, mut global_transform, _)) = camera_query.single_mut() {
+                        if let Ok((entity, mut transform, mut global_transform, _)) = queries.p0().single_mut() {
                             transform.translation = CAMERA_TOP_POSITION;
                             transform.look_at(Vec3::ZERO, Vec3::Z);
                             *global_transform = GlobalTransform::from(*transform);
@@ -70,7 +74,7 @@ pub fn egui_controls_ui(
                     }
                     
                     // Camera position display
-                    if let Ok((_, transform, _, _)) = camera_query.single() {
+                    if let Ok((_, transform, _, _)) = queries.p0().single() {
                         let pos = transform.translation;
                         ui.separator();
                         ui.label("Camera Position:");
@@ -81,52 +85,15 @@ pub fn egui_controls_ui(
                     
                     ui.separator();
                     
-                    // Projection mode toggle and controls
-                    if let Ok((_, transform, _, mut projection)) = camera_query.single_mut() {
+                    // Camera projection info and controls
+                    if let Ok((_, _, _, mut projection)) = queries.p0().single_mut() {
                         // Update stored FOV if currently in perspective mode
                         if let Projection::Perspective(ref persp) = *projection {
                             projection_state.last_perspective_fov = persp.fov;
                         }
                         
-                        let is_perspective = matches!(*projection, Projection::Perspective(_));
-                        let projection_label = if is_perspective { "Perspective" } else { "Orthographic" };
-                        
-                        // Toggle button
-                        if ui.button(format!("Switch to {}", if is_perspective { "Orthographic" } else { "Perspective" })).clicked() {
-                            if is_perspective {
-                                // Switch to orthographic projection
-                                if let Projection::Perspective(ref persp) = *projection {
-                                    // Calculate camera distance from origin (where particles are)
-                                    let camera_pos = transform.translation;
-                                    let camera_distance = camera_pos.length();
-                                    
-                                    // Calculate orthographic scale to match perspective view
-                                    // Formula: ortho_scale = camera_distance * tan(fov / 2.0)
-                                    // This ensures the visible area matches between perspective and orthographic
-                                    // tan(fov/2) gives half the visible height ratio at distance 1
-                                    // Multiply by distance to get actual visible half-height
-                                    let ortho_scale = camera_distance * (persp.fov / 2.0).tan();
-                                    
-                                    let mut ortho = OrthographicProjection::default_3d();
-                                    ortho.scale = ortho_scale.max(0.1); // Ensure minimum scale to avoid zero/negative
-                                    *projection = Projection::Orthographic(ortho);
-                                } else {
-                                    // Fallback if somehow not perspective
-                                    let mut ortho = OrthographicProjection::default_3d();
-                                    ortho.scale = 5.0;
-                                    *projection = Projection::Orthographic(ortho);
-                                }
-                            } else {
-                                // Switch to perspective projection
-                                // Restore the FOV that was stored
-                                *projection = Projection::Perspective(PerspectiveProjection {
-                                    fov: projection_state.last_perspective_fov,
-                                    ..default()
-                                });
-                            }
-                        }
-                        
-                        ui.label(format!("Current: {}", projection_label));
+                        // Display projection mode label
+                        ui.label("Perspective Camera");
                         
                         // FOV control for Perspective projection
                         if let Projection::Perspective(ref mut persp) = *projection {
@@ -152,27 +119,62 @@ pub fn egui_controls_ui(
                                 persp.fov = fov_degrees.to_radians();
                             }
                         }
+                    }
+                    
+                    ui.separator();
+                    
+                    // Debug section for camera/projection
+                    ui.heading("Debug");
+                    if ui.button("Print Camera & Particle Info").clicked() {
+                        // Use ParamSet to access both queries separately - must be in separate scopes
+                        let (camera_pos, camera_distance, forward, look_at_point, projection_info) = {
+                            if let Ok((_, transform, _, projection)) = queries.p0().single() {
+                                let pos = transform.translation;
+                                let dist = pos.length();
+                                let fwd = transform.forward();
+                                let look_at = pos + fwd * dist;
+                                (pos, dist, fwd, look_at, projection.clone())
+                            } else {
+                                return;
+                            }
+                        };
                         
-                        // Orthographic size control for Orthographic projection
-                        if let Projection::Orthographic(ref mut ortho) = *projection {
-                            ui.separator();
-                            ui.label("Orthographic Size");
+                        {
+                            let particle_query = queries.p1();
                             
-                            // Slider for continuous control
-                            if ui.add(egui::Slider::new(&mut ortho.scale, 1.0..=20.0)
-                                .text("Size")
-                                .step_by(0.1)).changed() {
-                                // Value updated automatically
+                            println!("=== CAMERA DEBUG INFO ===");
+                            println!("Camera Position: ({:.2}, {:.2}, {:.2})", camera_pos.x, camera_pos.y, camera_pos.z);
+                            println!("Camera Distance from Origin: {:.2}", camera_distance);
+                            println!("Camera Forward: ({:.2}, {:.2}, {:.2})", forward.x, forward.y, forward.z);
+                            println!("Looking at (approx): ({:.2}, {:.2}, {:.2})", look_at_point.x, look_at_point.y, look_at_point.z);
+                            
+                            match &projection_info {
+                                Projection::Perspective(persp) => {
+                                    println!("Projection: Perspective");
+                                    println!("FOV: {:.2} radians ({:.2} degrees)", persp.fov, persp.fov.to_degrees());
+                                    println!("Near: {:.2}, Far: {:.2}", persp.near, persp.far);
+                                }
+                                _ => {
+                                    println!("Projection: Other/Custom (not supported in debug)");
+                                }
                             }
                             
-                            // Integer input for discrete control
-                            let mut ortho_size_int = ortho.scale.round() as i32;
-                            if ui.add(egui::DragValue::new(&mut ortho_size_int)
-                                .range(1..=20)
-                                .speed(1)
-                                .prefix("Size: ")).changed() {
-                                ortho.scale = ortho_size_int as f32;
+                            println!("Particle bounds (from constants):");
+                            println!("  X: ±{:.2} units", crate::constants::GRID_BOUNDS);
+                            println!("  Z: ±{:.2} units", crate::constants::GRID_BOUNDS);
+                            println!("  Y: 0.0 to 2.0 units");
+                            
+                            // Print first 5 particle positions
+                            println!("\nSample Particle Positions (first 5):");
+                            for (i, particle_transform) in particle_query.iter().take(5).enumerate() {
+                                let pos = particle_transform.translation;
+                                let dist_from_camera = (pos - camera_pos).length();
+                                println!("  Particle {}: ({:.2}, {:.2}, {:.2}) - Distance from camera: {:.2}", 
+                                    i, pos.x, pos.y, pos.z, dist_from_camera);
                             }
+                            
+                            
+                            println!("=========================");
                         }
                     }
                     
@@ -223,6 +225,11 @@ pub fn egui_controls_ui(
         // This is more reliable than using the constant, as it accounts for any panel borders/margins
         let available_rect = ctx.available_rect(); // Content area after panels
         let viewport_rect = ctx.viewport_rect(); // Full window size
+        
+        // Store actual panel positions for camera viewport calculation
+        layout_state.left_panel_end_x = available_rect.left(); // Actual position where left panel ends
+        layout_state.right_panel_start_x = available_rect.right(); // Actual position where right panel starts
+        layout_state.top_bars_height = EGUI_TOP_BAR_HEIGHT + EGUI_SECOND_TOP_BAR_HEIGHT;
         
         // Get the actual left panel end position from available_rect
         // This ensures we position correctly even if panel has borders or content affects layout

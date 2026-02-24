@@ -2,12 +2,10 @@
 // Copyright (C) 2026 vecnode
 
 use bevy::prelude::*;
-use crate::components::{Particle, Selected};
-use crate::constants::{PARTICLE_RADIUS, COLOR_WHITE, COLOR_PURPLE};
-use crate::components::ParticleSelectionState;
+use crate::components::{Particle, Selected, ParticleSelectionState, MouseButtonState};
+use crate::constants::{PARTICLE_RADIUS, COLOR_WHITE, COLOR_GREEN};
 
 pub fn handle_particle_selection(
-    mouse_button_input: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
     mut particle_query: Query<(Entity, &Transform, &mut MeshMaterial3d<StandardMaterial>), (With<Particle>, Without<Selected>)>,
@@ -15,11 +13,13 @@ pub fn handle_particle_selection(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
     mut selection_state: ResMut<ParticleSelectionState>,
+    button_state: Res<MouseButtonState>,
 ) {
-    // Only handle clicks when mouse button is just released (not during camera drag)
-    // This ensures we don't interfere with camera rotation
-    // Note: bevy_egui automatically filters out input when cursor is over Egui UI
-    if !mouse_button_input.just_released(MouseButton::Left) {
+    // Use tracked state to detect release (transition from pressed to not pressed)
+    // This ensures we always detect button release even if just_released() event was missed
+    if button_state.left_was_pressed && !button_state.left_pressed {
+        // Button was released - process click
+    } else {
         return;
     }
     
@@ -144,8 +144,8 @@ fn toggle_particle_selection(
         commands.entity(entity).remove::<Selected>();
         selection_state.selected_particles.remove(&entity);
     } else if let Ok((_, _, mut material)) = particle_query.get_mut(entity) {
-        // Select: change to purple
-        material.0 = materials.add(COLOR_PURPLE);
+                // Select: change to green
+                material.0 = materials.add(COLOR_GREEN);
         commands.entity(entity).insert(Selected);
         selection_state.selected_particles.insert(entity);
     }

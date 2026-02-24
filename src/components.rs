@@ -60,12 +60,20 @@ pub struct SelectionBoxState {
     pub current_position: Option<Vec2>,
 }
 
+#[derive(Resource, Default)]
+pub struct MouseButtonState {
+    pub left_pressed: bool,
+    pub right_pressed: bool,
+    pub left_was_pressed: bool,
+    pub right_was_pressed: bool,
+}
+
 #[derive(Component)]
 pub struct RightCamera;
 
 #[derive(Resource)]
 pub struct CameraProjectionState {
-    pub last_perspective_fov: f32, // Store FOV when switching to orthographic
+    pub last_perspective_fov: f32, // Store FOV for camera projection state
 }
 
 impl Default for CameraProjectionState {
@@ -74,4 +82,11 @@ impl Default for CameraProjectionState {
             last_perspective_fov: 1.047, // Default ~60 degrees, will be updated from actual camera
         }
     }
+}
+
+#[derive(Resource, Default)]
+pub struct EguiLayoutState {
+    pub left_panel_end_x: f32, // Actual x position where left panel ends (in logical pixels)
+    pub right_panel_start_x: f32, // Actual x position where right panel starts (in logical pixels)
+    pub top_bars_height: f32, // Combined height of both top bars (in logical pixels)
 }

@@ -2,16 +2,17 @@
 // Copyright (C) 2026 vecnode
 
 use bevy::prelude::*;
-use crate::components::{SelectionBox, SelectionBoxState, Particle, Selected, ParticleSelectionState};
-use crate::constants::{SELECTION_BOX_COLOR, COLOR_PURPLE, COLOR_WHITE};
+use crate::components::{SelectionBox, SelectionBoxState, Particle, Selected, ParticleSelectionState, MouseButtonState};
+use crate::constants::{SELECTION_BOX_COLOR, COLOR_GREEN, COLOR_WHITE};
 
 pub fn handle_right_mouse_button(
-    mouse_button_input: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
     mut selection_box_state: ResMut<SelectionBoxState>,
+    button_state: Res<MouseButtonState>,
 ) {
-    if mouse_button_input.just_pressed(MouseButton::Right) {
+    // Use tracked state to detect press (transition from not pressed to pressed)
+    if !button_state.right_was_pressed && button_state.right_pressed {
         let Ok(window) = windows.single() else { return };
         
         // Only start selection if cursor is over the camera viewport (not over Egui panels)
@@ -39,9 +40,8 @@ pub fn handle_right_mouse_button(
         }
     }
     
-    if mouse_button_input.just_released(MouseButton::Right) {
-        selection_box_state.is_active = false;
-    }
+    // Release handling is now done unconditionally in cleanup_mouse_button_state
+    // to ensure releases are processed even when cursor is over Egui panels
 }
 
 pub fn update_selection_box_visual(
@@ -185,7 +185,7 @@ pub fn process_selection_box(
            screen_y >= top_physical && screen_y <= bottom_physical {
             if !particle_selection_state.selected_particles.contains(&entity) {
                 if let Ok((_, mut material)) = unselected_query.get_mut(entity) {
-                    material.0 = materials.add(COLOR_PURPLE);
+                    material.0 = materials.add(COLOR_GREEN);
                     commands.entity(entity).insert(Selected);
                     particle_selection_state.selected_particles.insert(entity);
                 }

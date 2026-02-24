@@ -7,11 +7,13 @@ pub mod camera;
 pub mod particles;
 pub mod selection;
 pub mod egui_ui;
+pub mod mouse;
 
 pub use camera::reset_free_camera_after_view_change;
 pub use particles::*;
 pub use selection::*;
 pub use egui_ui::egui_controls_ui;
+pub use mouse::*;
 
 pub fn animate_motion1_particles(
     time: Res<Time>,
