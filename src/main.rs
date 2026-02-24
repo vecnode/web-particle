@@ -137,10 +137,12 @@ fn update_camera_viewports(
     let left_panel_end_physical = (layout_state.left_panel_end_x * scale_factor) as u32;
     let right_panel_start_physical = (layout_state.right_panel_start_x * scale_factor) as u32;
     let top_bars_height_physical = (layout_state.top_bars_height * scale_factor) as u32;
+    let bottom_bar_height_physical = (layout_state.bottom_bar_height * scale_factor) as u32;
     
     // Calculate viewport size: from left panel end to right panel start
+    // Height: from below top bars to above bottom bar
     let viewport_width = right_panel_start_physical.saturating_sub(left_panel_end_physical);
-    let viewport_height = physical_size.y.saturating_sub(top_bars_height_physical);
+    let viewport_height = physical_size.y.saturating_sub(top_bars_height_physical).saturating_sub(bottom_bar_height_physical);
     
     // Camera viewport takes remaining space (center, below both top bars, between left and right panels)
     if let Ok(mut camera) = right_camera.single_mut() {

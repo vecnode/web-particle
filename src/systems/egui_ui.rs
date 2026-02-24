@@ -34,7 +34,7 @@ pub fn egui_controls_ui(
                 .outer_margin(egui::Margin::ZERO)) // Remove outer margin (including bottom)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label("Web Particle System");
+                    ui.label("Web-Particle System");
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.label(format!("Selected: {}", selection_state.selected_particles.len()));
                     });
@@ -51,8 +51,13 @@ pub fn egui_controls_ui(
             .resizable(false)
             .default_width(EGUI_LEFT_PANEL_WIDTH)
             .show(ctx, |ui| {
+                // Measure actual content area width
+                let left_panel_content_width = ui.available_width();
+                layout_state.left_panel_content_width = left_panel_content_width;
+                
                 ui.vertical(|ui| {
                     ui.heading("Controls");
+                    ui.label(format!("Content Width: {:.2}", left_panel_content_width));
                     ui.separator();
                     
                     // Camera controls section
@@ -234,36 +239,95 @@ pub fn egui_controls_ui(
                 });
             });
         
+        // Get left panel's actual total width (including frame borders) before showing right panel
+        let available_before_right = ctx.available_rect();
+        let left_panel_total_width = available_before_right.left(); // Total width from 0 to left panel end
+        
         // Inspector panel on the right side
+        // Set width to match left panel's total width (including borders) for symmetry
         egui::SidePanel::right("inspector_panel")
             .resizable(false)
-            .default_width(EGUI_RIGHT_PANEL_WIDTH)
-            .min_width(EGUI_RIGHT_PANEL_WIDTH)
-            .max_width(EGUI_RIGHT_PANEL_WIDTH)
+            .default_width(left_panel_total_width) // Match left panel's total width including borders
+            .min_width(left_panel_total_width)
+            .max_width(left_panel_total_width)
+            .frame(egui::Frame::side_top_panel(&ctx.style())
+                .corner_radius(0.0) // Squared corners
+                .inner_margin(egui::Margin::ZERO) // Remove inner margin
+                .outer_margin(egui::Margin::ZERO)) // Remove outer margin
             .show(ctx, |ui| {
+                // Measure actual content area width
+                let right_panel_content_width = ui.available_width();
+                layout_state.right_panel_content_width = right_panel_content_width;
+                
                 ui.vertical(|ui| {
                     ui.heading("Inspector");
+                    ui.label(format!("Content Width: {:.2}", right_panel_content_width));
+                    ui.separator();
+                    
+                    // Debug layout state variables
+                    ui.label("Layout Debug:");
+                    ui.label(format!("Left Panel End X: {:.2}", layout_state.left_panel_end_x));
+                    ui.label(format!("Right Panel Start X: {:.2}", layout_state.right_panel_start_x));
+                    ui.label(format!("Top Bars Height: {:.2}", layout_state.top_bars_height));
+                    
+                    let viewport_rect = ctx.viewport_rect();
+                    ui.separator();
+                    ui.label("Viewport:");
+                    ui.label(format!("Viewport Width: {:.2}", viewport_rect.width()));
+                    ui.label(format!("Viewport Right: {:.2}", viewport_rect.right()));
+                    
+                    ui.separator();
+                    ui.label("Constants:");
+                    ui.label(format!("Left Panel Width: {:.2}", EGUI_LEFT_PANEL_WIDTH));
+                    ui.label(format!("Right Panel Width: {:.2}", EGUI_RIGHT_PANEL_WIDTH));
+                    
+                    let available_rect = ctx.available_rect();
+                    ui.separator();
+                    ui.label("Available Rect:");
+                    ui.label(format!("Left: {:.2}", available_rect.left()));
+                    ui.label(format!("Right: {:.2}", available_rect.right()));
+                    ui.label(format!("Width: {:.2}", available_rect.width()));
+                    
+                    ui.separator();
+                    ui.label("Calculated Right Panel:");
+                    let calculated_start = viewport_rect.right() - EGUI_RIGHT_PANEL_WIDTH;
+                    ui.label(format!("Calculated Start: {:.2}", calculated_start));
+                    ui.label(format!("Should End: {:.2}", calculated_start + EGUI_RIGHT_PANEL_WIDTH));
+                    ui.label(format!("Difference: {:.2}", layout_state.right_panel_start_x - calculated_start));
+                    
+                    ui.separator();
+                    ui.label("Panel Width Comparison:");
+                    ui.label(format!("Left Content Width: {:.2}", layout_state.left_panel_content_width));
+                    ui.label(format!("Right Content Width: {:.2}", layout_state.right_panel_content_width));
+                    ui.label(format!("Width Difference: {:.2}", layout_state.right_panel_content_width - layout_state.left_panel_content_width));
                 });
             });
         
         // Second top bar (starts at x=200, fills to right panel, right under first top bar)
         // SOLUTION: After SidePanels are shown, available_rect() gives the content area (excluding panels)
-        // available_rect().left() gives us the ACTUAL position where the left panel ends
-        // This is more reliable than using the constant, as it accounts for any panel borders/margins
+        // available_rect().left() gives us the ACTUAL position where the left panel ends (includes frame borders)
+        // For the right panel, we mirror the left panel's total width (including borders) for symmetry
         let available_rect = ctx.available_rect(); // Content area after panels
+        let viewport_rect = ctx.viewport_rect();
         
-        // Store actual panel positions for camera viewport calculation
-        layout_state.left_panel_end_x = available_rect.left(); // Actual position where left panel ends
-        layout_state.right_panel_start_x = available_rect.right(); // Actual position where right panel starts
-        layout_state.top_bars_height = EGUI_TOP_BAR_HEIGHT + EGUI_SECOND_TOP_BAR_HEIGHT;
-        
-        // Get the actual left panel end position from available_rect
-        // This ensures we position correctly even if panel has borders or content affects layout
+        // Get the actual left panel end position (includes frame borders, ~38px extra)
         let left_panel_end_x = available_rect.left(); // Actual position where left panel ends
         
+        // Calculate right panel start position: mirror the left panel's total width
+        // If left panel ends at 238.03 (200px content + 38.03px borders), 
+        // right panel should start at viewport_right - 238.03 for symmetry
+        let left_panel_total_width = left_panel_end_x; // Total width from 0 to left panel end
+        let calculated_right_panel_start = viewport_rect.right() - left_panel_total_width;
+        
+        // Store actual panel positions for camera viewport calculation
+        layout_state.left_panel_end_x = left_panel_end_x; // Actual position where left panel ends (includes frame borders)
+        layout_state.right_panel_start_x = calculated_right_panel_start; // Right panel starts here (mirrors left panel width)
+        layout_state.top_bars_height = EGUI_TOP_BAR_HEIGHT + EGUI_SECOND_TOP_BAR_HEIGHT;
+        layout_state.bottom_bar_height = EGUI_SECOND_TOP_BAR_HEIGHT; // Bottom bar height
+        
         // Calculate exact width: from left panel end to right panel start
-        // available_rect.right() gives us where the right panel starts
-        let right_panel_start_x = available_rect.right();
+        // This gives us the 3D world viewport width (what's left in the middle)
+        let right_panel_start_x = calculated_right_panel_start;
         let second_bar_width = (right_panel_start_x - left_panel_end_x).max(0.0);
         let second_bar_height = EGUI_SECOND_TOP_BAR_HEIGHT; // Match first top bar height
         
@@ -317,6 +381,45 @@ pub fn egui_controls_ui(
                             streams_panel_state.is_visible = true;
                         }
                     });
+                });
+            });
+        
+        // Bottom bar - positioned at the bottom, between the two sidebars, under the 3D world
+        let viewport_rect_for_bottom = ctx.viewport_rect();
+        let bottom_bar_height = EGUI_SECOND_TOP_BAR_HEIGHT; // Same height as second top bar
+        let bottom_bar_y = viewport_rect_for_bottom.bottom() - bottom_bar_height;
+        
+        let bottom_bar_rect = egui::Rect::from_min_size(
+            egui::pos2(left_panel_end_x, bottom_bar_y),
+            egui::vec2(second_bar_width, bottom_bar_height)
+        );
+        
+        egui::Area::new(egui::Id::new("bottom_bar"))
+            .fixed_pos(bottom_bar_rect.min)
+            .constrain(true)
+            .show(ctx, |ui| {
+                // Allocate rect to intercept clicks and block 3D world input
+                let _response = ui.allocate_rect(bottom_bar_rect, egui::Sense::click());
+                
+                // Paint the background directly to match panel fill (exact size, no Frame expansion)
+                ui.painter().rect_filled(bottom_bar_rect, 0.0, ui.style().visuals.panel_fill);
+                
+                // Set clip rect to hard-constrain content to exactly the bar height
+                ui.set_clip_rect(bottom_bar_rect);
+                
+                // Allocate UI at the exact rect position to constrain content within the bar
+                #[allow(deprecated)]
+                ui.allocate_ui_at_rect(bottom_bar_rect, |ui| {
+                    // Constrain height to exactly match the bar height
+                    ui.set_max_height(bottom_bar_height);
+                    ui.set_min_height(bottom_bar_height);
+                    
+                    // Remove ALL margins, padding, and spacing inside the bar
+                    ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0); // No spacing at all
+                    ui.spacing_mut().window_margin = egui::Margin::ZERO; // No window margin
+                    ui.spacing_mut().menu_margin = egui::Margin::ZERO; // No menu margin
+                    
+                    // Empty bar - no buttons, just the background
                 });
             });
         

@@ -132,6 +132,9 @@ pub struct EguiLayoutState {
     pub left_panel_end_x: f32, // Actual x position where left panel ends (in logical pixels)
     pub right_panel_start_x: f32, // Actual x position where right panel starts (in logical pixels)
     pub top_bars_height: f32, // Combined height of both top bars (in logical pixels)
+    pub bottom_bar_height: f32, // Height of the bottom bar (in logical pixels)
+    pub left_panel_content_width: f32, // Actual content width inside left panel (in logical pixels)
+    pub right_panel_content_width: f32, // Actual content width inside right panel (in logical pixels)
 }
 
 #[derive(Resource, Default)]
