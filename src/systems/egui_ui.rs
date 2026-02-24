@@ -238,10 +238,6 @@ pub fn egui_controls_ui(
                 });
             });
         
-        // Get left panel's actual total width (including frame borders) before showing right panel
-        let available_before_right = ctx.available_rect();
-        let left_panel_total_width = available_before_right.left(); // Total width from 0 to left panel end
-        
         // Second top bar (starts at x=200, fills to right panel, right under first top bar)
         // SOLUTION: After SidePanels are shown, available_rect() gives the content area (excluding panels)
         // available_rect().left() gives us the ACTUAL position where the left panel ends (includes frame borders)
@@ -266,7 +262,6 @@ pub fn egui_controls_ui(
         
         // Calculate exact width: from left panel end to right edge of window (for testing)
         // Extended to the right side of the window, not stopping at inspector panel
-        let right_panel_start_x = calculated_right_panel_start;
         let second_bar_width = (viewport_rect.right() - left_panel_end_x).max(0.0);
         let second_bar_height = EGUI_SECOND_TOP_BAR_HEIGHT; // Match first top bar height
         
@@ -369,6 +364,12 @@ pub fn egui_controls_ui(
                         if ui.button("Inspector").clicked() {
                             layout_state.inspector_collapsed = !layout_state.inspector_collapsed;
                         }
+                        // Add spacing between buttons
+                        ui.add_space(5.0);
+                        // Left Panel toggle button
+                        if ui.button("Left Panel").clicked() {
+                            layout_state.left_half_panel_collapsed = !layout_state.left_half_panel_collapsed;
+                        }
                     });
                 });
             });
@@ -380,7 +381,7 @@ pub fn egui_controls_ui(
             let viewport_rect = ctx.viewport_rect();
             let inspector_width = left_panel_total_width;
             let inspector_x = viewport_rect.right() - inspector_width;
-            let inspector_y = 42.0; // Start 42px from top (below top bars)
+            let inspector_y = 22.0; // Start 22px from top (below top bars)
             let inspector_height = viewport_rect.height() - inspector_y;
             
             let inspector_rect = egui::Rect::from_min_size(
@@ -411,6 +412,54 @@ pub fn egui_controls_ui(
                         
                         ui.vertical(|ui| {
                             ui.heading("Inspector");
+                        });
+                    });
+                });
+        }
+        
+        // Left half panel - divides the 3D world space vertically (left 50%, full height)
+        // Only show if not collapsed (toggled by button in bottom bar)
+        if !layout_state.left_half_panel_collapsed {
+            let viewport_rect = ctx.viewport_rect();
+            let left_panel_end_x = layout_state.left_panel_end_x;
+            let viewport_right_edge = if layout_state.inspector_collapsed {
+                viewport_rect.right() // Extend to right edge when inspector is hidden
+            } else {
+                layout_state.right_panel_start_x // Stop at inspector when visible
+            };
+            
+            // Calculate total available width and divide in half
+            let total_viewport_width = viewport_right_edge - left_panel_end_x;
+            let half_width = total_viewport_width / 2.0;
+            let panel_y = layout_state.top_bars_height; // Start below top bars
+            let panel_height = viewport_rect.height() - layout_state.top_bars_height - layout_state.bottom_bar_height; // Full height minus bars
+            
+            let left_half_panel_rect = egui::Rect::from_min_size(
+                egui::pos2(left_panel_end_x, panel_y),
+                egui::vec2(half_width, panel_height)
+            );
+            
+            egui::Area::new(egui::Id::new("left_half_panel"))
+                .fixed_pos(left_half_panel_rect.min)
+                .constrain(true)
+                .show(ctx, |ui| {
+                    // Allocate rect to intercept clicks
+                    let _response = ui.allocate_rect(left_half_panel_rect, egui::Sense::click());
+                    
+                    // Paint the background
+                    ui.painter().rect_filled(left_half_panel_rect, 0.0, ui.style().visuals.panel_fill);
+                    
+                    // Set clip rect to constrain content
+                    ui.set_clip_rect(left_half_panel_rect);
+                    
+                    // Allocate UI at the exact rect position
+                    #[allow(deprecated)]
+                    ui.allocate_ui_at_rect(left_half_panel_rect, |ui| {
+                        ui.vertical(|ui| {
+                            ui.heading("Left Panel");
+                            ui.separator();
+                            ui.label("This panel occupies the left half of the 3D world space.");
+                            ui.label("The 3D view is on the right half.");
                         });
                     });
                 });

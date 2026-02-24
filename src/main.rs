@@ -149,16 +149,26 @@ fn update_camera_viewports(
         (layout_state.right_panel_start_x * scale_factor) as u32 // Stop at inspector when visible
     };
     
-    // Calculate viewport size: from left panel end to right edge (inspector or window edge)
+    // Calculate total available space: from left panel end to right edge (inspector or window edge)
     // Height: from below top bars to above bottom bar
-    let viewport_width = viewport_right_edge.saturating_sub(left_panel_end_physical);
+    let total_viewport_width = viewport_right_edge.saturating_sub(left_panel_end_physical);
     let viewport_height = physical_size.y.saturating_sub(top_bars_height_physical).saturating_sub(bottom_bar_height_physical);
     
-    // Camera viewport takes remaining space (center, below both top bars, between left panel and right edge)
+    // Calculate camera viewport: if left half panel is visible, use right 50%, otherwise use full width
+    let (camera_viewport_x, camera_viewport_width) = if layout_state.left_half_panel_collapsed {
+        // Left panel is hidden: 3D world uses full width
+        (left_panel_end_physical, total_viewport_width)
+    } else {
+        // Left panel is visible: 3D world uses right half (50% width)
+        let half_width = total_viewport_width / 2;
+        (left_panel_end_physical + half_width, half_width)
+    };
+    
+    // Camera viewport (right half when left panel visible, full width when left panel hidden)
     if let Ok(mut camera) = right_camera.single_mut() {
         camera.viewport = Some(Viewport {
-            physical_position: UVec2::new(left_panel_end_physical, top_bars_height_physical),
-            physical_size: UVec2::new(viewport_width, viewport_height),
+            physical_position: UVec2::new(camera_viewport_x, top_bars_height_physical),
+            physical_size: UVec2::new(camera_viewport_width, viewport_height),
             ..default()
         });
     }

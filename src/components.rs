@@ -129,7 +129,7 @@ impl Default for CameraProjectionState {
     }
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct EguiLayoutState {
     pub left_panel_end_x: f32, // Actual x position where left panel ends (in logical pixels)
     pub right_panel_start_x: f32, // Actual x position where right panel starts (in logical pixels)
@@ -138,6 +138,22 @@ pub struct EguiLayoutState {
     pub left_panel_content_width: f32, // Actual content width inside left panel (in logical pixels)
     pub right_panel_content_width: f32, // Actual content width inside right panel (in logical pixels)
     pub inspector_collapsed: bool, // Whether the inspector panel is collapsed
+    pub left_half_panel_collapsed: bool, // Whether the left half panel (middle) is collapsed
+}
+
+impl Default for EguiLayoutState {
+    fn default() -> Self {
+        Self {
+            left_panel_end_x: 0.0,
+            right_panel_start_x: 0.0,
+            top_bars_height: 0.0,
+            bottom_bar_height: 0.0,
+            left_panel_content_width: 0.0,
+            right_panel_content_width: 0.0,
+            inspector_collapsed: false,
+            left_half_panel_collapsed: true, // Start with left panel hidden
+        }
+    }
 }
 
 #[derive(Resource, Default)]
