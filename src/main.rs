@@ -44,6 +44,9 @@ fn main() {
         .init_resource::<components::MouseButtonState>()
         .init_resource::<components::CameraProjectionState>()
         .init_resource::<components::EguiLayoutState>()
+        .init_resource::<components::GridState>()
+        .init_resource::<components::ParticleBoundsState>()
+        .init_resource::<components::ParticleGroupState>()
         .add_systems(
             Startup,
             (
@@ -59,6 +62,9 @@ fn main() {
             (
                 track_mouse_button_state,
                 cleanup_mouse_button_state,
+                update_grid_dimensions,
+                update_particle_bounds,
+                update_particle_group_transform,
                 handle_particle_selection.run_if(not(egui_wants_any_pointer_input)),
                 animate_motion1_particles,
                 update_trajectory_visualization,

@@ -6,10 +6,9 @@ use bevy::prelude::*;
 // Particle constants
 pub const PARTICLE_COUNT: usize = 50;
 pub const PARTICLE_RADIUS: f32 = 0.025;
-pub const GRID_BOUNDS: f32 = 4.0;
+pub const PARTICLE_GRID_BOUNDS: f32 = 5.0; // Default particle distribution bounds (half-width: 5.0m = 10m total, matches grid)
 
 // Grid constants
-pub const GRID_SIZE: f32 = 10.0;
 pub const GRID_SPACING: f32 = 1.0;
 pub const GRID_LINE_RADIUS: f32 = 0.005;
 pub const GRID_COLOR: Color = Color::srgb(0.5, 0.5, 0.5); // Mid gray

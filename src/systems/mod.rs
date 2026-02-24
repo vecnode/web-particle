@@ -8,12 +8,14 @@ pub mod particles;
 pub mod selection;
 pub mod egui_ui;
 pub mod mouse;
+pub mod grid;
 
 pub use camera::reset_free_camera_after_view_change;
 pub use particles::*;
 pub use selection::*;
 pub use egui_ui::egui_controls_ui;
 pub use mouse::*;
+pub use grid::update_grid_dimensions;
 
 pub fn animate_motion1_particles(
     time: Res<Time>,
@@ -52,7 +54,7 @@ pub fn animate_motion1_particles(
                 transform.translation = Vec3::new(new_x, current_pos.y, new_z);
                 
                 // Update global position state
-                particle_positions.positions.insert(*entity, transform.translation);
+                particle_positions.current_positions.insert(*entity, transform.translation);
             }
         }
     }

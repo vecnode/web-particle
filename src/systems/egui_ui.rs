@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
-use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState};
+use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState, GridState, ParticleBoundsState, ParticleGroupState};
 use crate::constants::{CAMERA_FRONT_POSITION, CAMERA_TOP_POSITION, EGUI_TOP_BAR_HEIGHT, EGUI_SECOND_TOP_BAR_HEIGHT, EGUI_LEFT_PANEL_WIDTH, EGUI_RIGHT_PANEL_WIDTH};
 
 pub fn egui_controls_ui(
@@ -14,6 +14,9 @@ pub fn egui_controls_ui(
     mut camera_changed: ResMut<CameraViewChanged>,
     mut projection_state: ResMut<CameraProjectionState>,
     mut layout_state: ResMut<EguiLayoutState>,
+    mut grid_state: ResMut<GridState>,
+    mut particle_bounds_state: ResMut<ParticleBoundsState>,
+    mut particle_group_state: ResMut<ParticleGroupState>,
     mut queries: ParamSet<(
         Query<(Entity, &mut Transform, &mut GlobalTransform, &mut Projection), (With<bevy::prelude::Camera3d>, With<bevy::camera_controller::free_camera::FreeCamera>, With<crate::components::RightCamera>)>,
         Query<&Transform, With<crate::components::Particle>>,
@@ -123,6 +126,32 @@ pub fn egui_controls_ui(
                     
                     ui.separator();
                     
+                    // Grid controls section
+                    ui.heading("Grid Controls");
+                    ui.label("Grid Size (meters)");
+                    
+                    // X dimension input
+                    let mut size_x = grid_state.size_x;
+                    if ui.add(egui::DragValue::new(&mut size_x)
+                        .range(1..=100)
+                        .speed(1)
+                        .prefix("X: ")
+                        .suffix(" m")).changed() {
+                        grid_state.size_x = size_x;
+                    }
+                    
+                    // Z dimension input
+                    let mut size_z = grid_state.size_z;
+                    if ui.add(egui::DragValue::new(&mut size_z)
+                        .range(1..=100)
+                        .speed(1)
+                        .prefix("Z: ")
+                        .suffix(" m")).changed() {
+                        grid_state.size_z = size_z;
+                    }
+                    
+                    ui.separator();
+                    
                     // Debug section for camera/projection
                     ui.heading("Debug");
                     if ui.button("Print Camera & Particle Info").clicked() {
@@ -160,8 +189,8 @@ pub fn egui_controls_ui(
                             }
                             
                             println!("Particle bounds (from constants):");
-                            println!("  X: ±{:.2} units", crate::constants::GRID_BOUNDS);
-                            println!("  Z: ±{:.2} units", crate::constants::GRID_BOUNDS);
+                            println!("  X: ±{:.2} units", crate::constants::PARTICLE_GRID_BOUNDS);
+                            println!("  Z: ±{:.2} units", crate::constants::PARTICLE_GRID_BOUNDS);
                             println!("  Y: 0.0 to 2.0 units");
                             
                             // Print first 5 particle positions
@@ -176,6 +205,102 @@ pub fn egui_controls_ui(
                             
                             println!("=========================");
                         }
+                    }
+                    
+                    ui.separator();
+                    
+                    // Particle bounds controls section
+                    ui.heading("Particle Bounds");
+                    ui.label("Distribution Area (meters)");
+                    
+                    // X bounds input
+                    let mut bounds_x = particle_bounds_state.bounds_x;
+                    if ui.add(egui::DragValue::new(&mut bounds_x)
+                        .range(1.0..=50.0)
+                        .speed(0.5)
+                        .prefix("X: ±")
+                        .suffix(" m")).changed() {
+                        particle_bounds_state.bounds_x = bounds_x.max(0.1);
+                    }
+                    
+                    // Z bounds input
+                    let mut bounds_z = particle_bounds_state.bounds_z;
+                    if ui.add(egui::DragValue::new(&mut bounds_z)
+                        .range(1.0..=50.0)
+                        .speed(0.5)
+                        .prefix("Z: ±")
+                        .suffix(" m")).changed() {
+                        particle_bounds_state.bounds_z = bounds_z.max(0.1);
+                    }
+                    
+                    // Y min input
+                    let mut bounds_y_min = particle_bounds_state.bounds_y_min;
+                    if ui.add(egui::DragValue::new(&mut bounds_y_min)
+                        .range(0.0..=10.0)
+                        .speed(0.1)
+                        .prefix("Y Min: ")
+                        .suffix(" m")).changed() {
+                        particle_bounds_state.bounds_y_min = bounds_y_min;
+                        // Ensure min < max
+                        if particle_bounds_state.bounds_y_min >= particle_bounds_state.bounds_y_max {
+                            particle_bounds_state.bounds_y_max = particle_bounds_state.bounds_y_min + 0.1;
+                        }
+                    }
+                    
+                    // Y max input
+                    let mut bounds_y_max = particle_bounds_state.bounds_y_max;
+                    if ui.add(egui::DragValue::new(&mut bounds_y_max)
+                        .range(0.0..=10.0)
+                        .speed(0.1)
+                        .prefix("Y Max: ")
+                        .suffix(" m")).changed() {
+                        particle_bounds_state.bounds_y_max = bounds_y_max;
+                        // Ensure max > min
+                        if particle_bounds_state.bounds_y_max <= particle_bounds_state.bounds_y_min {
+                            particle_bounds_state.bounds_y_min = particle_bounds_state.bounds_y_max - 0.1;
+                        }
+                    }
+                    
+                    ui.separator();
+                    
+                    // Particle group controls section
+                    ui.heading("Particle Group");
+                    ui.label("Transform All Particles");
+                    
+                    // Group offset inputs
+                    let mut offset_x = particle_group_state.offset.x;
+                    if ui.add(egui::DragValue::new(&mut offset_x)
+                        .range(-100.0..=100.0)
+                        .speed(0.5)
+                        .prefix("Offset X: ")
+                        .suffix(" m")).changed() {
+                        particle_group_state.offset.x = offset_x;
+                    }
+                    
+                    let mut offset_y = particle_group_state.offset.y;
+                    if ui.add(egui::DragValue::new(&mut offset_y)
+                        .range(-100.0..=100.0)
+                        .speed(0.5)
+                        .prefix("Offset Y: ")
+                        .suffix(" m")).changed() {
+                        particle_group_state.offset.y = offset_y;
+                    }
+                    
+                    let mut offset_z = particle_group_state.offset.z;
+                    if ui.add(egui::DragValue::new(&mut offset_z)
+                        .range(-100.0..=100.0)
+                        .speed(0.5)
+                        .prefix("Offset Z: ")
+                        .suffix(" m")).changed() {
+                        particle_group_state.offset.z = offset_z;
+                    }
+                    
+                    // Group scale input
+                    let mut scale = particle_group_state.scale;
+                    if ui.add(egui::Slider::new(&mut scale, 0.1..=5.0)
+                        .text("Scale")
+                        .step_by(0.1)).changed() {
+                        particle_group_state.scale = scale;
                     }
                     
                     ui.separator();
@@ -198,12 +323,6 @@ pub fn egui_controls_ui(
                         trajectory_state.is_visible = !trajectory_state.is_visible;
                     }
                     
-                    ui.separator();
-                    ui.label("Instructions");
-                    ui.label("Left click: Select particle");
-                    ui.label("Right drag: Select area");
-                    ui.label("Mouse drag: Rotate camera");
-                    ui.label("Scroll: Zoom");
                 });
             });
         

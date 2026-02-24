@@ -2,7 +2,7 @@
 // Copyright (C) 2026 vecnode
 
 use bevy::prelude::*;
-use crate::components::{Particle, Selected, ParticleSelectionState, MouseButtonState};
+use crate::components::{Particle, Selected, ParticleSelectionState, MouseButtonState, ParticleBoundsState, ParticleGroupState};
 use crate::constants::{PARTICLE_RADIUS, COLOR_WHITE, COLOR_GREEN};
 
 pub fn handle_particle_selection(
@@ -148,5 +148,66 @@ fn toggle_particle_selection(
                 material.0 = materials.add(COLOR_GREEN);
         commands.entity(entity).insert(Selected);
         selection_state.selected_particles.insert(entity);
+    }
+}
+
+pub fn update_particle_bounds(
+    mut particle_query: Query<(Entity, &mut Transform), With<Particle>>,
+    mut bounds_state: ResMut<ParticleBoundsState>,
+    mut particle_positions: ResMut<crate::components::ParticlePositions>,
+) {
+    // Check if bounds changed
+    if bounds_state.bounds_x != bounds_state.previous_bounds_x ||
+       bounds_state.bounds_z != bounds_state.previous_bounds_z ||
+       bounds_state.bounds_y_min != bounds_state.previous_bounds_y_min ||
+       bounds_state.bounds_y_max != bounds_state.previous_bounds_y_max {
+        
+        let bounds_y_range_new = bounds_state.bounds_y_max - bounds_state.bounds_y_min;
+        
+        // Update all particle positions based on new bounds
+        for (entity, mut transform) in particle_query.iter_mut() {
+            if let Some(base_pos) = particle_positions.base_positions.get(&entity) {
+                // Recalculate world position from normalized base position using new bounds
+                let x = base_pos.x * bounds_state.bounds_x * 2.0 - bounds_state.bounds_x;
+                let z = base_pos.z * bounds_state.bounds_z * 2.0 - bounds_state.bounds_z;
+                let y = bounds_state.bounds_y_min + base_pos.y * bounds_y_range_new;
+                
+                let new_position = Vec3::new(x, y, z);
+                transform.translation = new_position;
+                particle_positions.current_positions.insert(entity, new_position);
+            }
+        }
+        
+        // Update previous values
+        bounds_state.previous_bounds_x = bounds_state.bounds_x;
+        bounds_state.previous_bounds_z = bounds_state.bounds_z;
+        bounds_state.previous_bounds_y_min = bounds_state.bounds_y_min;
+        bounds_state.previous_bounds_y_max = bounds_state.bounds_y_max;
+    }
+}
+
+pub fn update_particle_group_transform(
+    mut particle_query: Query<(Entity, &mut Transform), With<Particle>>,
+    group_state: Res<ParticleGroupState>,
+    mut particle_positions: ResMut<crate::components::ParticlePositions>,
+    bounds_state: Res<ParticleBoundsState>,
+) {
+    // Apply group transform (offset and scale) to all particles
+    // Calculate base positions from normalized positions and current bounds
+    let bounds_y_range = bounds_state.bounds_y_max - bounds_state.bounds_y_min;
+    
+    for (entity, mut transform) in particle_query.iter_mut() {
+        if let Some(base_pos) = particle_positions.base_positions.get(&entity) {
+            // Calculate base world position from normalized position
+            let base_x = base_pos.x * bounds_state.bounds_x * 2.0 - bounds_state.bounds_x;
+            let base_z = base_pos.z * bounds_state.bounds_z * 2.0 - bounds_state.bounds_z;
+            let base_y = bounds_state.bounds_y_min + base_pos.y * bounds_y_range;
+            let base_world_pos = Vec3::new(base_x, base_y, base_z);
+            
+            // Apply group transform: (base_pos * scale) + offset
+            let final_position = base_world_pos * group_state.scale + group_state.offset;
+            transform.translation = final_position;
+            particle_positions.current_positions.insert(entity, final_position);
+        }
     }
 }

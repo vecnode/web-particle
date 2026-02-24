@@ -27,7 +27,50 @@ pub struct ParticleSelectionState {
 
 #[derive(Resource, Default)]
 pub struct ParticlePositions {
-    pub positions: std::collections::HashMap<Entity, Vec3>,
+    pub base_positions: std::collections::HashMap<Entity, Vec3>, // Original spawn positions (normalized relative to bounds)
+    pub current_positions: std::collections::HashMap<Entity, Vec3>, // Current world positions
+}
+
+#[derive(Resource)]
+pub struct ParticleBoundsState {
+    pub bounds_x: f32,  // Half-width in X direction (meters)
+    pub bounds_z: f32,  // Half-width in Z direction (meters)
+    pub bounds_y_min: f32,  // Minimum Y (meters)
+    pub bounds_y_max: f32,  // Maximum Y (meters)
+    pub previous_bounds_x: f32,
+    pub previous_bounds_z: f32,
+    pub previous_bounds_y_min: f32,
+    pub previous_bounds_y_max: f32,
+}
+
+impl Default for ParticleBoundsState {
+    fn default() -> Self {
+        Self {
+            bounds_x: 5.0,  // Half-width: 5.0m = 10m total width (matches grid)
+            bounds_z: 5.0,  // Half-width: 5.0m = 10m total width (matches grid)
+            bounds_y_min: 0.0,
+            bounds_y_max: 2.0,
+            previous_bounds_x: 5.0,
+            previous_bounds_z: 5.0,
+            previous_bounds_y_min: 0.0,
+            previous_bounds_y_max: 2.0,
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct ParticleGroupState {
+    pub offset: Vec3,  // Global offset for all particles (for moving as group)
+    pub scale: f32,    // Scale factor for resizing (1.0 = no scaling)
+}
+
+impl Default for ParticleGroupState {
+    fn default() -> Self {
+        Self {
+            offset: Vec3::ZERO,
+            scale: 1.0,
+        }
+    }
 }
 
 #[derive(Resource)]
@@ -89,4 +132,26 @@ pub struct EguiLayoutState {
     pub left_panel_end_x: f32, // Actual x position where left panel ends (in logical pixels)
     pub right_panel_start_x: f32, // Actual x position where right panel starts (in logical pixels)
     pub top_bars_height: f32, // Combined height of both top bars (in logical pixels)
+}
+
+#[derive(Component)]
+pub struct GridLine;
+
+#[derive(Resource)]
+pub struct GridState {
+    pub size_x: i32, // Grid size in X direction (meters)
+    pub size_z: i32, // Grid size in Z direction (meters)
+    pub previous_size_x: i32,
+    pub previous_size_z: i32,
+}
+
+impl Default for GridState {
+    fn default() -> Self {
+        Self {
+            size_x: 10,
+            size_z: 10,
+            previous_size_x: 10,
+            previous_size_z: 10,
+        }
+    }
 }
