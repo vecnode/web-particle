@@ -139,16 +139,22 @@ fn update_camera_viewports(
     
     // Use actual panel positions from Egui layout (in logical pixels, convert to physical)
     let left_panel_end_physical = (layout_state.left_panel_end_x * scale_factor) as u32;
-    let right_panel_start_physical = (layout_state.right_panel_start_x * scale_factor) as u32;
     let top_bars_height_physical = (layout_state.top_bars_height * scale_factor) as u32;
     let bottom_bar_height_physical = (layout_state.bottom_bar_height * scale_factor) as u32;
     
-    // Calculate viewport size: from left panel end to right panel start
+    // Calculate viewport width: extend to right edge if inspector is collapsed, otherwise stop at inspector
+    let viewport_right_edge = if layout_state.inspector_collapsed {
+        physical_size.x // Extend to right edge of window when inspector is hidden
+    } else {
+        (layout_state.right_panel_start_x * scale_factor) as u32 // Stop at inspector when visible
+    };
+    
+    // Calculate viewport size: from left panel end to right edge (inspector or window edge)
     // Height: from below top bars to above bottom bar
-    let viewport_width = right_panel_start_physical.saturating_sub(left_panel_end_physical);
+    let viewport_width = viewport_right_edge.saturating_sub(left_panel_end_physical);
     let viewport_height = physical_size.y.saturating_sub(top_bars_height_physical).saturating_sub(bottom_bar_height_physical);
     
-    // Camera viewport takes remaining space (center, below both top bars, between left and right panels)
+    // Camera viewport takes remaining space (center, below both top bars, between left panel and right edge)
     if let Ok(mut camera) = right_camera.single_mut() {
         camera.viewport = Some(Viewport {
             physical_position: UVec2::new(left_panel_end_physical, top_bars_height_physical),

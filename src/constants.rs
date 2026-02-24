@@ -40,7 +40,7 @@ pub const TRAJECTORY_COLOR: Color = Color::srgba(0.0, 1.0, 1.0, 0.6); // Cyan wi
 pub const SELECTION_BOX_COLOR: Color = Color::srgba(0.2, 0.5, 1.0, 0.2); // Semi-transparent blue
 
 // World background color
-pub const WORLD_BACKGROUND_COLOR: Color = Color::srgb(0.03, 0.03, 0.03); // Very dark, almost pure black
+pub const WORLD_BACKGROUND_COLOR: Color = Color::srgb(0.08, 0.08, 0.08); // Very dark, almost pure black
 
 // UI layout constants
 pub const EGUI_TOP_BAR_HEIGHT: f32 = 20.0;

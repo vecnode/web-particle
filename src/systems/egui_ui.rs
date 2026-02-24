@@ -242,30 +242,6 @@ pub fn egui_controls_ui(
         let available_before_right = ctx.available_rect();
         let left_panel_total_width = available_before_right.left(); // Total width from 0 to left panel end
         
-        // Inspector panel on the right side
-        // Set width to match left panel's total width (including borders) for symmetry
-        // Only show if not collapsed (toggled by button in bottom bar)
-        if !layout_state.inspector_collapsed {
-            egui::SidePanel::right("inspector_panel")
-                .resizable(false)
-                .default_width(left_panel_total_width) // Match left panel's total width including borders
-                .min_width(left_panel_total_width)
-                .max_width(left_panel_total_width)
-                .frame(egui::Frame::side_top_panel(&ctx.style())
-                    .corner_radius(0.0) // Squared corners
-                    .inner_margin(egui::Margin::ZERO) // Remove inner margin
-                    .outer_margin(egui::Margin::ZERO)) // Remove outer margin
-                .show(ctx, |ui| {
-                    // Measure actual content area width
-                    let right_panel_content_width = ui.available_width();
-                    layout_state.right_panel_content_width = right_panel_content_width;
-                    
-                    ui.vertical(|ui| {
-                        ui.heading("Inspector");
-                    });
-                });
-        }
-        
         // Second top bar (starts at x=200, fills to right panel, right under first top bar)
         // SOLUTION: After SidePanels are shown, available_rect() gives the content area (excluding panels)
         // available_rect().left() gives us the ACTUAL position where the left panel ends (includes frame borders)
@@ -288,10 +264,10 @@ pub fn egui_controls_ui(
         layout_state.top_bars_height = EGUI_TOP_BAR_HEIGHT + EGUI_SECOND_TOP_BAR_HEIGHT;
         layout_state.bottom_bar_height = EGUI_SECOND_TOP_BAR_HEIGHT; // Bottom bar height
         
-        // Calculate exact width: from left panel end to right panel start
-        // This gives us the 3D world viewport width (what's left in the middle)
+        // Calculate exact width: from left panel end to right edge of window (for testing)
+        // Extended to the right side of the window, not stopping at inspector panel
         let right_panel_start_x = calculated_right_panel_start;
-        let second_bar_width = (right_panel_start_x - left_panel_end_x).max(0.0);
+        let second_bar_width = (viewport_rect.right() - left_panel_end_x).max(0.0);
         let second_bar_height = EGUI_SECOND_TOP_BAR_HEIGHT; // Match first top bar height
         
         // Position the second bar exactly where the first bar ends (no gap)
@@ -396,6 +372,49 @@ pub fn egui_controls_ui(
                     });
                 });
             });
+        
+        // Inspector panel on the right side - rendered AFTER bars as Area to appear on top
+        // Set width to match left panel's total width (including borders) for symmetry
+        // Only show if not collapsed (toggled by button in bottom bar)
+        if !layout_state.inspector_collapsed {
+            let viewport_rect = ctx.viewport_rect();
+            let inspector_width = left_panel_total_width;
+            let inspector_x = viewport_rect.right() - inspector_width;
+            let inspector_y = 42.0; // Start 42px from top (below top bars)
+            let inspector_height = viewport_rect.height() - inspector_y;
+            
+            let inspector_rect = egui::Rect::from_min_size(
+                egui::pos2(inspector_x, inspector_y),
+                egui::vec2(inspector_width, inspector_height)
+            );
+            
+            egui::Area::new(egui::Id::new("inspector_panel"))
+                .fixed_pos(inspector_rect.min)
+                .constrain(true)
+                .order(egui::Order::Foreground) // Ensure it renders on top
+                .show(ctx, |ui| {
+                    // Allocate rect to intercept clicks
+                    let _response = ui.allocate_rect(inspector_rect, egui::Sense::click());
+                    
+                    // Paint the background
+                    ui.painter().rect_filled(inspector_rect, 0.0, ui.style().visuals.panel_fill);
+                    
+                    // Set clip rect to constrain content
+                    ui.set_clip_rect(inspector_rect);
+                    
+                    // Allocate UI at the exact rect position
+                    #[allow(deprecated)]
+                    ui.allocate_ui_at_rect(inspector_rect, |ui| {
+                        // Measure actual content area width (accounting for frame)
+                        let right_panel_content_width = ui.available_width();
+                        layout_state.right_panel_content_width = right_panel_content_width;
+                        
+                        ui.vertical(|ui| {
+                            ui.heading("Inspector");
+                        });
+                    });
+                });
+        }
         
         // Streams panel - covers the 3D viewport when visible
         if streams_panel_state.is_visible {
