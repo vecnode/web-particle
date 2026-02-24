@@ -47,6 +47,7 @@ fn main() {
         .init_resource::<components::GridState>()
         .init_resource::<components::ParticleBoundsState>()
         .init_resource::<components::ParticleGroupState>()
+        .init_resource::<components::StreamsPanelState>()
         .add_systems(
             Startup,
             (

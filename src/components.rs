@@ -134,6 +134,11 @@ pub struct EguiLayoutState {
     pub top_bars_height: f32, // Combined height of both top bars (in logical pixels)
 }
 
+#[derive(Resource, Default)]
+pub struct StreamsPanelState {
+    pub is_visible: bool,
+}
+
 #[derive(Component)]
 pub struct GridLine;
 

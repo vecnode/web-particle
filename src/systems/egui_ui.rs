@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
-use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState, GridState, ParticleBoundsState, ParticleGroupState};
+use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState, GridState, ParticleBoundsState, ParticleGroupState, StreamsPanelState};
 use crate::constants::{CAMERA_FRONT_POSITION, CAMERA_TOP_POSITION, EGUI_TOP_BAR_HEIGHT, EGUI_SECOND_TOP_BAR_HEIGHT, EGUI_LEFT_PANEL_WIDTH, EGUI_RIGHT_PANEL_WIDTH};
 
 pub fn egui_controls_ui(
@@ -17,6 +17,7 @@ pub fn egui_controls_ui(
     mut grid_state: ResMut<GridState>,
     mut particle_bounds_state: ResMut<ParticleBoundsState>,
     mut particle_group_state: ResMut<ParticleGroupState>,
+    mut streams_panel_state: ResMut<StreamsPanelState>,
     mut queries: ParamSet<(
         Query<(Entity, &mut Transform, &mut GlobalTransform, &mut Projection), (With<bevy::prelude::Camera3d>, With<bevy::camera_controller::free_camera::FreeCamera>, With<crate::components::RightCamera>)>,
         Query<&Transform, With<crate::components::Particle>>,
@@ -250,7 +251,6 @@ pub fn egui_controls_ui(
         // available_rect().left() gives us the ACTUAL position where the left panel ends
         // This is more reliable than using the constant, as it accounts for any panel borders/margins
         let available_rect = ctx.available_rect(); // Content area after panels
-        let viewport_rect = ctx.viewport_rect(); // Full window size
         
         // Store actual panel positions for camera viewport calculation
         layout_state.left_panel_end_x = available_rect.left(); // Actual position where left panel ends
@@ -295,29 +295,69 @@ pub fn egui_controls_ui(
                     ui.set_min_height(second_bar_height);
                     
                     // Remove ALL margins, padding, and spacing inside the bar
-                    ui.spacing_mut().button_padding = egui::vec2(4.0, 0.0); // Zero vertical padding, minimal horizontal
+                    ui.spacing_mut().button_padding = egui::vec2(4.0, 0.0); // Reduced vertical padding to make button 4px smaller
                     ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0); // No spacing at all
                     ui.spacing_mut().window_margin = egui::Margin::ZERO; // No window margin
                     ui.spacing_mut().menu_margin = egui::Margin::ZERO; // No menu margin
                     
+                    // Add 2px vertical offset to push button down
+                    ui.add_space(2.0);
                     // Use the same layout approach as the first top bar - no margins
                     ui.horizontal(|ui| {
                         // Add 5px left margin for the button
                         ui.add_space(5.0);
                         // Button with normal frame to make it visible (not frame(false))
-                        if ui.button("File").clicked() {
-                            // Debug: Print sizes to terminal
-                            println!("=== Second Top Bar Debug ===");
-                            println!("EGUI_TOP_BAR_HEIGHT: {}px", EGUI_TOP_BAR_HEIGHT);
-                            println!("second_bar_height: {}px", second_bar_height);
-                            println!("second_bar_rect size: {}x{}", second_bar_rect.width(), second_bar_rect.height());
-                            println!("second_bar_rect position: ({}, {})", second_bar_rect.min.x, second_bar_rect.min.y);
-                            println!("first_top_bar_end_y: {}", first_top_bar_end_y);
-                            println!("viewport_rect size: {}x{}", viewport_rect.width(), viewport_rect.height());
-                            println!("===========================");
+                        if ui.button("3D Viewer").clicked() {
+                            streams_panel_state.is_visible = false;
+                        }
+                        // Add spacing between buttons
+                        ui.add_space(5.0);
+                        // Streams button with same style
+                        if ui.button("Streams").clicked() {
+                            streams_panel_state.is_visible = true;
                         }
                     });
                 });
             });
+        
+        // Streams panel - covers the 3D viewport when visible
+        if streams_panel_state.is_visible {
+            let viewport_rect = ctx.viewport_rect();
+            let viewport_x = layout_state.left_panel_end_x;
+            let viewport_y = layout_state.top_bars_height;
+            let viewport_width = layout_state.right_panel_start_x - layout_state.left_panel_end_x;
+            let viewport_height = viewport_rect.height() - layout_state.top_bars_height;
+            
+            let streams_panel_rect = egui::Rect::from_min_size(
+                egui::pos2(viewport_x, viewport_y),
+                egui::vec2(viewport_width.max(0.0), viewport_height.max(0.0))
+            );
+            
+            egui::Area::new(egui::Id::new("streams_panel"))
+                .fixed_pos(streams_panel_rect.min)
+                .constrain(true)
+                .interactable(true)
+                .show(ctx, |ui| {
+                    // Allocate rect to intercept clicks and block 3D world input
+                    let _response = ui.allocate_rect(streams_panel_rect, egui::Sense::click());
+                    
+                    // Paint background to fully cover the 3D viewport
+                    ui.painter().rect_filled(streams_panel_rect, 0.0, ui.style().visuals.panel_fill);
+                    
+                    // Set clip rect to constrain content
+                    ui.set_clip_rect(streams_panel_rect);
+                    
+                    // Allocate UI at the exact rect position
+                    #[allow(deprecated)]
+                    ui.allocate_ui_at_rect(streams_panel_rect, |ui| {
+                        ui.vertical(|ui| {
+                            ui.heading("Streams Panel");
+                            ui.separator();
+                            ui.label("This panel covers the 3D viewport.");
+                            ui.label("Click '3D Viewer' to return to the 3D world.");
+                        });
+                    });
+                });
+        }
     }
 }
