@@ -111,10 +111,7 @@ pub struct MouseButtonState {
     pub right_was_pressed: bool,
 }
 
-#[derive(Resource, Default)]
-pub struct CameraMouseInputBlocked {
-    pub is_blocked: bool,
-}
+
 
 #[derive(Component)]
 pub struct RightCamera;
@@ -140,6 +137,7 @@ pub struct EguiLayoutState {
     pub bottom_bar_height: f32, // Height of the bottom bar (in logical pixels)
     pub left_panel_content_width: f32, // Actual content width inside left panel (in logical pixels)
     pub right_panel_content_width: f32, // Actual content width inside right panel (in logical pixels)
+    pub inspector_collapsed: bool, // Whether the inspector panel is collapsed
 }
 
 #[derive(Resource, Default)]

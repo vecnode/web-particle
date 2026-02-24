@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState, GridState, ParticleBoundsState, ParticleGroupState, StreamsPanelState};
-use crate::constants::{CAMERA_FRONT_POSITION, CAMERA_TOP_POSITION, EGUI_TOP_BAR_HEIGHT, EGUI_SECOND_TOP_BAR_HEIGHT, EGUI_LEFT_PANEL_WIDTH, EGUI_RIGHT_PANEL_WIDTH};
+use crate::constants::{CAMERA_FRONT_POSITION, CAMERA_TOP_POSITION, EGUI_TOP_BAR_HEIGHT, EGUI_SECOND_TOP_BAR_HEIGHT, EGUI_LEFT_PANEL_WIDTH};
 
 pub fn egui_controls_ui(
     mut contexts: EguiContexts,
@@ -19,7 +19,7 @@ pub fn egui_controls_ui(
     mut particle_group_state: ResMut<ParticleGroupState>,
     mut streams_panel_state: ResMut<StreamsPanelState>,
     mut queries: ParamSet<(
-        Query<(Entity, &mut Transform, &mut GlobalTransform, &mut Projection), (With<bevy::prelude::Camera3d>, With<bevy::camera_controller::free_camera::FreeCamera>, With<crate::components::RightCamera>)>,
+        Query<(Entity, &mut Transform, &mut GlobalTransform, &mut Projection), (With<bevy::prelude::Camera3d>, With<crate::plugins::viewport_constrained_camera::ViewportConstrainedCamera>, With<crate::components::RightCamera>)>,
         Query<&Transform, With<crate::components::Particle>>,
     )>,
 ) {
@@ -57,7 +57,6 @@ pub fn egui_controls_ui(
                 
                 ui.vertical(|ui| {
                     ui.heading("Controls");
-                    ui.label(format!("Content Width: {:.2}", left_panel_content_width));
                     ui.separator();
                     
                     // Camera controls section
@@ -245,63 +244,27 @@ pub fn egui_controls_ui(
         
         // Inspector panel on the right side
         // Set width to match left panel's total width (including borders) for symmetry
-        egui::SidePanel::right("inspector_panel")
-            .resizable(false)
-            .default_width(left_panel_total_width) // Match left panel's total width including borders
-            .min_width(left_panel_total_width)
-            .max_width(left_panel_total_width)
-            .frame(egui::Frame::side_top_panel(&ctx.style())
-                .corner_radius(0.0) // Squared corners
-                .inner_margin(egui::Margin::ZERO) // Remove inner margin
-                .outer_margin(egui::Margin::ZERO)) // Remove outer margin
-            .show(ctx, |ui| {
-                // Measure actual content area width
-                let right_panel_content_width = ui.available_width();
-                layout_state.right_panel_content_width = right_panel_content_width;
-                
-                ui.vertical(|ui| {
-                    ui.heading("Inspector");
-                    ui.label(format!("Content Width: {:.2}", right_panel_content_width));
-                    ui.separator();
+        // Only show if not collapsed (toggled by button in bottom bar)
+        if !layout_state.inspector_collapsed {
+            egui::SidePanel::right("inspector_panel")
+                .resizable(false)
+                .default_width(left_panel_total_width) // Match left panel's total width including borders
+                .min_width(left_panel_total_width)
+                .max_width(left_panel_total_width)
+                .frame(egui::Frame::side_top_panel(&ctx.style())
+                    .corner_radius(0.0) // Squared corners
+                    .inner_margin(egui::Margin::ZERO) // Remove inner margin
+                    .outer_margin(egui::Margin::ZERO)) // Remove outer margin
+                .show(ctx, |ui| {
+                    // Measure actual content area width
+                    let right_panel_content_width = ui.available_width();
+                    layout_state.right_panel_content_width = right_panel_content_width;
                     
-                    // Debug layout state variables
-                    ui.label("Layout Debug:");
-                    ui.label(format!("Left Panel End X: {:.2}", layout_state.left_panel_end_x));
-                    ui.label(format!("Right Panel Start X: {:.2}", layout_state.right_panel_start_x));
-                    ui.label(format!("Top Bars Height: {:.2}", layout_state.top_bars_height));
-                    
-                    let viewport_rect = ctx.viewport_rect();
-                    ui.separator();
-                    ui.label("Viewport:");
-                    ui.label(format!("Viewport Width: {:.2}", viewport_rect.width()));
-                    ui.label(format!("Viewport Right: {:.2}", viewport_rect.right()));
-                    
-                    ui.separator();
-                    ui.label("Constants:");
-                    ui.label(format!("Left Panel Width: {:.2}", EGUI_LEFT_PANEL_WIDTH));
-                    ui.label(format!("Right Panel Width: {:.2}", EGUI_RIGHT_PANEL_WIDTH));
-                    
-                    let available_rect = ctx.available_rect();
-                    ui.separator();
-                    ui.label("Available Rect:");
-                    ui.label(format!("Left: {:.2}", available_rect.left()));
-                    ui.label(format!("Right: {:.2}", available_rect.right()));
-                    ui.label(format!("Width: {:.2}", available_rect.width()));
-                    
-                    ui.separator();
-                    ui.label("Calculated Right Panel:");
-                    let calculated_start = viewport_rect.right() - EGUI_RIGHT_PANEL_WIDTH;
-                    ui.label(format!("Calculated Start: {:.2}", calculated_start));
-                    ui.label(format!("Should End: {:.2}", calculated_start + EGUI_RIGHT_PANEL_WIDTH));
-                    ui.label(format!("Difference: {:.2}", layout_state.right_panel_start_x - calculated_start));
-                    
-                    ui.separator();
-                    ui.label("Panel Width Comparison:");
-                    ui.label(format!("Left Content Width: {:.2}", layout_state.left_panel_content_width));
-                    ui.label(format!("Right Content Width: {:.2}", layout_state.right_panel_content_width));
-                    ui.label(format!("Width Difference: {:.2}", layout_state.right_panel_content_width - layout_state.left_panel_content_width));
+                    ui.vertical(|ui| {
+                        ui.heading("Inspector");
+                    });
                 });
-            });
+        }
         
         // Second top bar (starts at x=200, fills to right panel, right under first top bar)
         // SOLUTION: After SidePanels are shown, available_rect() gives the content area (excluding panels)
@@ -415,11 +378,22 @@ pub fn egui_controls_ui(
                     ui.set_min_height(bottom_bar_height);
                     
                     // Remove ALL margins, padding, and spacing inside the bar
+                    ui.spacing_mut().button_padding = egui::vec2(4.0, 0.0); // Reduced vertical padding to make button 4px smaller
                     ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0); // No spacing at all
                     ui.spacing_mut().window_margin = egui::Margin::ZERO; // No window margin
                     ui.spacing_mut().menu_margin = egui::Margin::ZERO; // No menu margin
                     
-                    // Empty bar - no buttons, just the background
+                    // Add Inspector toggle button - positioned like "3D Viewer" button but a couple pixels down
+                    ui.add_space(2.0); // Add 2px vertical offset (couple pixels down)
+                    // Use the same layout approach as the second top bar - no margins
+                    ui.horizontal(|ui| {
+                        // Add 5px left margin for the button
+                        ui.add_space(5.0);
+                        // Button with normal frame to make it visible (not frame(false))
+                        if ui.button("Inspector").clicked() {
+                            layout_state.inspector_collapsed = !layout_state.inspector_collapsed;
+                        }
+                    });
                 });
             });
         

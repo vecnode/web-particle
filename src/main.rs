@@ -3,12 +3,12 @@
 
 mod components;
 mod constants;
+mod plugins;
 mod setup;
 mod systems;
 
 use bevy::prelude::*;
 use bevy::camera::Viewport;
-use bevy::camera_controller::free_camera::FreeCameraPlugin;
 use bevy_egui::{EguiPlugin, EguiGlobalSettings, PrimaryEguiContext, EguiPrimaryContextPass};
 
 use setup::*;
@@ -28,7 +28,7 @@ fn main() {
             })
         )
         .add_plugins(EguiPlugin::default())
-        .add_plugins(FreeCameraPlugin)
+        .add_plugins(plugins::viewport_constrained_camera::ViewportConstrainedCameraPlugin)
         .insert_resource(EguiGlobalSettings {
             auto_create_primary_context: false,
             ..default()
@@ -41,7 +41,6 @@ fn main() {
         .init_resource::<TrajectoryState>()
         .init_resource::<SelectionBoxState>()
         .init_resource::<components::MouseButtonState>()
-        .init_resource::<components::CameraMouseInputBlocked>()
         .init_resource::<components::CameraProjectionState>()
         .init_resource::<components::EguiLayoutState>()
         .init_resource::<components::GridState>()
@@ -56,13 +55,6 @@ fn main() {
                 spawn_grid,
                 setup_camera_and_lights,
                 setup_split_screen_cameras,
-            ),
-        )
-        .add_systems(
-            PreUpdate,
-            (
-                constrain_free_camera_mouse_to_viewport, // Check viewport and set block flag
-                block_camera_mouse_input_before_freecamera, // Store transform before FreeCameraPlugin
             ),
         )
         .add_systems(
@@ -83,10 +75,7 @@ fn main() {
         )
         .add_systems(
             PostUpdate,
-            (
-                reset_free_camera_after_view_change,
-                restore_camera_after_blocked_mouse, // Restore rotation if mouse was blocked
-            ),
+            reset_viewport_constrained_camera_after_view_change,
         )
         .add_systems(
             Update,
@@ -118,7 +107,12 @@ fn setup_split_screen_cameras(
             ..default()
         }),
         Transform::from_translation(crate::constants::CAMERA_START_POSITION).looking_at(Vec3::ZERO, Vec3::Y),
-        bevy::camera_controller::free_camera::FreeCamera::default(),
+        plugins::viewport_constrained_camera::ViewportConstrainedCamera::default(),
+        plugins::viewport_constrained_camera::ViewportConstrainedCameraState {
+            pitch: 0.0,
+            yaw: 0.0,
+            initialized: false,
+        },
         crate::components::RightCamera,
     ));
     
