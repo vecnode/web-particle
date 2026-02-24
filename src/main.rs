@@ -9,7 +9,7 @@ mod systems;
 use bevy::prelude::*;
 use bevy::camera::Viewport;
 use bevy::camera_controller::free_camera::FreeCameraPlugin;
-use bevy_egui::{EguiPlugin, EguiGlobalSettings, PrimaryEguiContext, EguiPrimaryContextPass, input::egui_wants_any_pointer_input};
+use bevy_egui::{EguiPlugin, EguiGlobalSettings, PrimaryEguiContext, EguiPrimaryContextPass};
 
 use setup::*;
 use systems::*;
@@ -31,7 +31,6 @@ fn main() {
         .add_plugins(FreeCameraPlugin)
         .insert_resource(EguiGlobalSettings {
             auto_create_primary_context: false,
-            enable_absorb_bevy_input_system: true,
             ..default()
         })
         .insert_resource(ClearColor(WORLD_BACKGROUND_COLOR))
@@ -42,6 +41,7 @@ fn main() {
         .init_resource::<TrajectoryState>()
         .init_resource::<SelectionBoxState>()
         .init_resource::<components::MouseButtonState>()
+        .init_resource::<components::CameraMouseInputBlocked>()
         .init_resource::<components::CameraProjectionState>()
         .init_resource::<components::EguiLayoutState>()
         .init_resource::<components::GridState>()
@@ -59,6 +59,13 @@ fn main() {
             ),
         )
         .add_systems(
+            PreUpdate,
+            (
+                constrain_free_camera_mouse_to_viewport, // Check viewport and set block flag
+                block_camera_mouse_input_before_freecamera, // Store transform before FreeCameraPlugin
+            ),
+        )
+        .add_systems(
             Update,
             (
                 track_mouse_button_state,
@@ -66,17 +73,20 @@ fn main() {
                 update_grid_dimensions,
                 update_particle_bounds,
                 update_particle_group_transform,
-                handle_particle_selection.run_if(not(egui_wants_any_pointer_input)),
+                handle_particle_selection,
                 animate_motion1_particles,
                 update_trajectory_visualization,
-                handle_right_mouse_button.run_if(not(egui_wants_any_pointer_input)),
-                update_selection_box_visual.run_if(not(egui_wants_any_pointer_input)),
-                process_selection_box.run_if(not(egui_wants_any_pointer_input)),
+                handle_right_mouse_button,
+                update_selection_box_visual,
+                process_selection_box,
             ),
         )
         .add_systems(
             PostUpdate,
-            reset_free_camera_after_view_change,
+            (
+                reset_free_camera_after_view_change,
+                restore_camera_after_blocked_mouse, // Restore rotation if mouse was blocked
+            ),
         )
         .add_systems(
             Update,

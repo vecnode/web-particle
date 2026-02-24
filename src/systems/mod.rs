@@ -10,7 +10,7 @@ pub mod egui_ui;
 pub mod mouse;
 pub mod grid;
 
-pub use camera::reset_free_camera_after_view_change;
+pub use camera::{reset_free_camera_after_view_change, constrain_free_camera_mouse_to_viewport, block_camera_mouse_input_before_freecamera, restore_camera_after_blocked_mouse};
 pub use particles::*;
 pub use selection::*;
 pub use egui_ui::egui_controls_ui;

@@ -111,6 +111,11 @@ pub struct MouseButtonState {
     pub right_was_pressed: bool,
 }
 
+#[derive(Resource, Default)]
+pub struct CameraMouseInputBlocked {
+    pub is_blocked: bool,
+}
+
 #[derive(Component)]
 pub struct RightCamera;
 
