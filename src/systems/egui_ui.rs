@@ -359,17 +359,18 @@ pub fn egui_controls_ui(
                     // Use the same layout approach as the second top bar - no margins
                     ui.horizontal(|ui| {
                         // Add 5px left margin for the button
+                        // Add spacing between buttons
+                        ui.add_space(5.0);
+                        // Left Panel toggle button
+                        if ui.button("Middle-Left Panel").clicked() {
+                            layout_state.left_half_panel_collapsed = !layout_state.left_half_panel_collapsed;
+                        }
                         ui.add_space(5.0);
                         // Button with normal frame to make it visible (not frame(false))
                         if ui.button("Inspector").clicked() {
                             layout_state.inspector_collapsed = !layout_state.inspector_collapsed;
                         }
-                        // Add spacing between buttons
-                        ui.add_space(5.0);
-                        // Left Panel toggle button
-                        if ui.button("Left Panel").clicked() {
-                            layout_state.left_half_panel_collapsed = !layout_state.left_half_panel_collapsed;
-                        }
+                        
                     });
                 });
             });
@@ -400,6 +401,12 @@ pub fn egui_controls_ui(
                     // Paint the background
                     ui.painter().rect_filled(inspector_rect, 0.0, ui.style().visuals.panel_fill);
                     
+                    // Draw left border to match the left panel's border
+                    let border_stroke = ui.style().visuals.widgets.noninteractive.bg_stroke;
+                    let left_edge_start = egui::pos2(inspector_rect.left(), inspector_rect.top());
+                    let left_edge_end = egui::pos2(inspector_rect.left(), inspector_rect.bottom());
+                    ui.painter().line_segment([left_edge_start, left_edge_end], border_stroke);
+                    
                     // Set clip rect to constrain content
                     ui.set_clip_rect(inspector_rect);
                     
@@ -410,8 +417,12 @@ pub fn egui_controls_ui(
                         let right_panel_content_width = ui.available_width();
                         layout_state.right_panel_content_width = right_panel_content_width;
                         
+                        // Add left padding to match SidePanel's default padding
+                        //ui.add_space(8.0); // Small left padding similar to SidePanel
+                        
                         ui.vertical(|ui| {
                             ui.heading("Inspector");
+                            ui.separator();
                         });
                     });
                 });
@@ -456,9 +467,8 @@ pub fn egui_controls_ui(
                     #[allow(deprecated)]
                     ui.allocate_ui_at_rect(left_half_panel_rect, |ui| {
                         ui.vertical(|ui| {
-                            ui.heading("Left Panel");
+                            ui.heading("Middle-Left Panel");
                             ui.separator();
-                            ui.label("This panel occupies the left half of the 3D world space.");
                             ui.label("The 3D view is on the right half.");
                         });
                     });
@@ -470,7 +480,13 @@ pub fn egui_controls_ui(
             let viewport_rect = ctx.viewport_rect();
             let viewport_x = layout_state.left_panel_end_x;
             let viewport_y = layout_state.top_bars_height;
-            let viewport_width = layout_state.right_panel_start_x - layout_state.left_panel_end_x;
+            // Adjust width based on inspector visibility: extend to right edge if inspector is hidden
+            let viewport_right_edge = if layout_state.inspector_collapsed {
+                viewport_rect.right() // Extend to right edge of window when inspector is hidden
+            } else {
+                layout_state.right_panel_start_x // Stop at inspector when visible
+            };
+            let viewport_width = viewport_right_edge - layout_state.left_panel_end_x;
             let viewport_height = viewport_rect.height() - layout_state.top_bars_height;
             
             let streams_panel_rect = egui::Rect::from_min_size(
