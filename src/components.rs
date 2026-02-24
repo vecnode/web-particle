@@ -33,27 +33,23 @@ pub struct ParticlePositions {
 
 #[derive(Resource)]
 pub struct ParticleBoundsState {
-    pub bounds_x: f32,  // Half-width in X direction (meters)
-    pub bounds_z: f32,  // Half-width in Z direction (meters)
-    pub bounds_y_min: f32,  // Minimum Y (meters)
-    pub bounds_y_max: f32,  // Maximum Y (meters)
+    pub bounds_x: f32,  // Total size in X direction (meters) - diameter, not half-width
+    pub bounds_z: f32,  // Total size in Z direction (meters) - diameter, not half-width
+    pub bounds_y_height: f32,  // Y height/range starting from 1.0 (meters)
     pub previous_bounds_x: f32,
     pub previous_bounds_z: f32,
-    pub previous_bounds_y_min: f32,
-    pub previous_bounds_y_max: f32,
+    pub previous_bounds_y_height: f32,
 }
 
 impl Default for ParticleBoundsState {
     fn default() -> Self {
         Self {
-            bounds_x: 5.0,  // Half-width: 5.0m = 10m total width (matches grid)
-            bounds_z: 5.0,  // Half-width: 5.0m = 10m total width (matches grid)
-            bounds_y_min: 0.0,
-            bounds_y_max: 2.0,
-            previous_bounds_x: 5.0,
-            previous_bounds_z: 5.0,
-            previous_bounds_y_min: 0.0,
-            previous_bounds_y_max: 2.0,
+            bounds_x: 10.0,  // Total size: 10m (matches grid)
+            bounds_z: 10.0,  // Total size: 10m (matches grid)
+            bounds_y_height: 1.0,  // Height: 1.0m (Y range: 1.0 to 2.0)
+            previous_bounds_x: 10.0,
+            previous_bounds_z: 10.0,
+            previous_bounds_y_height: 1.0,
         }
     }
 }
@@ -62,6 +58,8 @@ impl Default for ParticleBoundsState {
 pub struct ParticleGroupState {
     pub offset: Vec3,  // Global offset for all particles (for moving as group)
     pub scale: f32,    // Scale factor for resizing (1.0 = no scaling)
+    pub previous_offset: Vec3,  // For change detection
+    pub previous_scale: f32,  // For change detection
 }
 
 impl Default for ParticleGroupState {
@@ -69,6 +67,8 @@ impl Default for ParticleGroupState {
         Self {
             offset: Vec3::ZERO,
             scale: 1.0,
+            previous_offset: Vec3::ZERO,
+            previous_scale: 1.0,
         }
     }
 }

@@ -23,6 +23,7 @@ pub fn animate_motion1_particles(
     selection_state: Res<crate::components::ParticleSelectionState>,
     mut particle_query: Query<(Entity, &mut Transform), With<crate::components::Particle>>,
     mut particle_positions: ResMut<crate::components::ParticlePositions>,
+    group_state: Res<crate::components::ParticleGroupState>,
 ) {
     if !motion1_state.is_active {
         return;
@@ -31,24 +32,33 @@ pub fn animate_motion1_particles(
     let delta_time = time.delta_secs();
     let rotation_delta = motion1_state.rotation_speed * delta_time;
     
+    // Calculate rotation center accounting for group offset
+    // Motion rotates around the group offset center, not world origin
+    let rotation_center = Vec3::new(group_state.offset.x, 0.0, group_state.offset.z);
+    
     for entity in &selection_state.selected_particles {
         if let Ok((_, mut transform)) = particle_query.get_mut(*entity) {
             let current_pos = transform.translation;
             
-            // Calculate radius in XZ plane (horizontal distance from center at Vec3::ZERO)
-            let xz_pos = Vec3::new(current_pos.x, 0.0, current_pos.z);
-            let radius = xz_pos.length();
+            // Calculate position relative to rotation center
+            let relative_pos = current_pos - rotation_center;
+            let xz_relative = Vec3::new(relative_pos.x, 0.0, relative_pos.z);
+            let radius = xz_relative.length();
             
             if radius > 0.001 {
-                // Calculate current angle in XZ plane
-                let current_angle = current_pos.z.atan2(current_pos.x);
+                // Calculate current angle in XZ plane relative to rotation center
+                let current_angle = xz_relative.z.atan2(xz_relative.x);
                 
                 // Rotate clockwise (increase angle)
                 let new_angle = current_angle + rotation_delta;
                 
-                // Calculate new XZ position maintaining radius
-                let new_x = radius * new_angle.cos();
-                let new_z = radius * new_angle.sin();
+                // Calculate new XZ position maintaining radius, relative to rotation center
+                let new_x_relative = radius * new_angle.cos();
+                let new_z_relative = radius * new_angle.sin();
+                
+                // Convert back to world coordinates
+                let new_x = rotation_center.x + new_x_relative;
+                let new_z = rotation_center.z + new_z_relative;
                 
                 // Update position maintaining Y height
                 transform.translation = Vec3::new(new_x, current_pos.y, new_z);

@@ -56,6 +56,16 @@ pub fn egui_controls_ui(
                     
                     // Camera controls section
                     ui.label("Camera Controls");
+                    
+                    // Camera position display (one line)
+                    if let Ok((_, transform, _, _)) = queries.p0().single() {
+                        let pos = transform.translation;
+                        ui.label(format!("Camera Position: ({}, {}, {})", 
+                            pos.x.round() as i32, 
+                            pos.y.round() as i32, 
+                            pos.z.round() as i32));
+                    }
+                    
                     if ui.button("Camera Front").clicked() {
                         if let Ok((entity, mut transform, mut global_transform, _)) = queries.p0().single_mut() {
                             transform.translation = CAMERA_FRONT_POSITION;
@@ -75,16 +85,9 @@ pub fn egui_controls_ui(
                             camera_changed.entity = Some(entity);
                         }
                     }
-                    
-                    // Camera position display
-                    if let Ok((_, transform, _, _)) = queries.p0().single() {
-                        let pos = transform.translation;
-                        ui.separator();
-                        ui.label("Camera Position:");
-                        ui.label(format!("X: {}", pos.x.round() as i32));
-                        ui.label(format!("Y: {}", pos.y.round() as i32));
-                        ui.label(format!("Z: {}", pos.z.round() as i32));
-                    }
+
+                    // Display projection mode label
+                    ui.label("Perspective Camera");
                     
                     ui.separator();
                     
@@ -95,12 +98,9 @@ pub fn egui_controls_ui(
                             projection_state.last_perspective_fov = persp.fov;
                         }
                         
-                        // Display projection mode label
-                        ui.label("Perspective Camera");
                         
                         // FOV control for Perspective projection
                         if let Projection::Perspective(ref mut persp) = *projection {
-                            ui.separator();
                             ui.label("Field of View (FOV)");
                             
                             // Convert to degrees for user-friendly display
@@ -111,23 +111,13 @@ pub fn egui_controls_ui(
                                 persp.fov = fov_degrees.to_radians();
                             }
                             
-                            // Integer input option (alternative)
-                            let mut fov_degrees_int = fov_degrees.round() as i32;
-                            if ui.add(egui::DragValue::new(&mut fov_degrees_int)
-                                .range(30..=120)
-                                .speed(1)
-                                .prefix("FOV: ")
-                                .suffix("°")).changed() {
-                                fov_degrees = fov_degrees_int as f32;
-                                persp.fov = fov_degrees.to_radians();
-                            }
                         }
                     }
                     
                     ui.separator();
-                    
+                    ui.label(format!("Particles Selected: {}", selection_state.selected_particles.len()));
+
                     // Grid controls section
-                    ui.heading("Grid Controls");
                     ui.label("Grid Size (meters)");
                     
                     // X dimension input
@@ -150,75 +140,17 @@ pub fn egui_controls_ui(
                         grid_state.size_z = size_z;
                     }
                     
-                    ui.separator();
                     
-                    // Debug section for camera/projection
-                    ui.heading("Debug");
-                    if ui.button("Print Camera & Particle Info").clicked() {
-                        // Use ParamSet to access both queries separately - must be in separate scopes
-                        let (camera_pos, camera_distance, forward, look_at_point, projection_info) = {
-                            if let Ok((_, transform, _, projection)) = queries.p0().single() {
-                                let pos = transform.translation;
-                                let dist = pos.length();
-                                let fwd = transform.forward();
-                                let look_at = pos + fwd * dist;
-                                (pos, dist, fwd, look_at, projection.clone())
-                            } else {
-                                return;
-                            }
-                        };
-                        
-                        {
-                            let particle_query = queries.p1();
-                            
-                            println!("=== CAMERA DEBUG INFO ===");
-                            println!("Camera Position: ({:.2}, {:.2}, {:.2})", camera_pos.x, camera_pos.y, camera_pos.z);
-                            println!("Camera Distance from Origin: {:.2}", camera_distance);
-                            println!("Camera Forward: ({:.2}, {:.2}, {:.2})", forward.x, forward.y, forward.z);
-                            println!("Looking at (approx): ({:.2}, {:.2}, {:.2})", look_at_point.x, look_at_point.y, look_at_point.z);
-                            
-                            match &projection_info {
-                                Projection::Perspective(persp) => {
-                                    println!("Projection: Perspective");
-                                    println!("FOV: {:.2} radians ({:.2} degrees)", persp.fov, persp.fov.to_degrees());
-                                    println!("Near: {:.2}, Far: {:.2}", persp.near, persp.far);
-                                }
-                                _ => {
-                                    println!("Projection: Other/Custom (not supported in debug)");
-                                }
-                            }
-                            
-                            println!("Particle bounds (from constants):");
-                            println!("  X: ±{:.2} units", crate::constants::PARTICLE_GRID_BOUNDS);
-                            println!("  Z: ±{:.2} units", crate::constants::PARTICLE_GRID_BOUNDS);
-                            println!("  Y: 0.0 to 2.0 units");
-                            
-                            // Print first 5 particle positions
-                            println!("\nSample Particle Positions (first 5):");
-                            for (i, particle_transform) in particle_query.iter().take(5).enumerate() {
-                                let pos = particle_transform.translation;
-                                let dist_from_camera = (pos - camera_pos).length();
-                                println!("  Particle {}: ({:.2}, {:.2}, {:.2}) - Distance from camera: {:.2}", 
-                                    i, pos.x, pos.y, pos.z, dist_from_camera);
-                            }
-                            
-                            
-                            println!("=========================");
-                        }
-                    }
-                    
-                    ui.separator();
                     
                     // Particle bounds controls section
-                    ui.heading("Particle Bounds");
-                    ui.label("Distribution Area (meters)");
+                    ui.label("Particle Distribution Area (meters)");
                     
                     // X bounds input
                     let mut bounds_x = particle_bounds_state.bounds_x;
                     if ui.add(egui::DragValue::new(&mut bounds_x)
-                        .range(1.0..=50.0)
+                        .range(1.0..=100.0)
                         .speed(0.5)
-                        .prefix("X: ±")
+                        .prefix("X: ")
                         .suffix(" m")).changed() {
                         particle_bounds_state.bounds_x = bounds_x.max(0.1);
                     }
@@ -226,46 +158,26 @@ pub fn egui_controls_ui(
                     // Z bounds input
                     let mut bounds_z = particle_bounds_state.bounds_z;
                     if ui.add(egui::DragValue::new(&mut bounds_z)
-                        .range(1.0..=50.0)
+                        .range(1.0..=100.0)
                         .speed(0.5)
-                        .prefix("Z: ±")
+                        .prefix("Z: ")
                         .suffix(" m")).changed() {
                         particle_bounds_state.bounds_z = bounds_z.max(0.1);
                     }
                     
-                    // Y min input
-                    let mut bounds_y_min = particle_bounds_state.bounds_y_min;
-                    if ui.add(egui::DragValue::new(&mut bounds_y_min)
-                        .range(0.0..=10.0)
+                    // Y Height input (starts at 1.0, extends upward)
+                    let mut bounds_y_height = particle_bounds_state.bounds_y_height;
+                    if ui.add(egui::DragValue::new(&mut bounds_y_height)
+                        .range(0.1..=50.0)
                         .speed(0.1)
-                        .prefix("Y Min: ")
+                        .prefix("Y: ")
                         .suffix(" m")).changed() {
-                        particle_bounds_state.bounds_y_min = bounds_y_min;
-                        // Ensure min < max
-                        if particle_bounds_state.bounds_y_min >= particle_bounds_state.bounds_y_max {
-                            particle_bounds_state.bounds_y_max = particle_bounds_state.bounds_y_min + 0.1;
-                        }
+                        particle_bounds_state.bounds_y_height = bounds_y_height.max(0.1);
                     }
                     
-                    // Y max input
-                    let mut bounds_y_max = particle_bounds_state.bounds_y_max;
-                    if ui.add(egui::DragValue::new(&mut bounds_y_max)
-                        .range(0.0..=10.0)
-                        .speed(0.1)
-                        .prefix("Y Max: ")
-                        .suffix(" m")).changed() {
-                        particle_bounds_state.bounds_y_max = bounds_y_max;
-                        // Ensure max > min
-                        if particle_bounds_state.bounds_y_max <= particle_bounds_state.bounds_y_min {
-                            particle_bounds_state.bounds_y_min = particle_bounds_state.bounds_y_max - 0.1;
-                        }
-                    }
-                    
-                    ui.separator();
                     
                     // Particle group controls section
-                    ui.heading("Particle Group");
-                    ui.label("Transform All Particles");
+                    ui.label("Particle Transform All");
                     
                     // Group offset inputs
                     let mut offset_x = particle_group_state.offset.x;
@@ -303,12 +215,7 @@ pub fn egui_controls_ui(
                         particle_group_state.scale = scale;
                     }
                     
-                    ui.separator();
-                    
-                    // Particle controls section
-                    ui.heading("Particle Controls");
-                    ui.label(format!("Selected: {}", selection_state.selected_particles.len()));
-                    
+                   
                     ui.separator();
                     
                     // Motion 1 button

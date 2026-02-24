@@ -17,9 +17,8 @@ pub fn spawn_particles(
     // Get bounds from resource or use defaults
     let bounds_x = bounds_state.as_ref().map(|bs| bs.bounds_x).unwrap_or(PARTICLE_GRID_BOUNDS);
     let bounds_z = bounds_state.as_ref().map(|bs| bs.bounds_z).unwrap_or(PARTICLE_GRID_BOUNDS);
-    let bounds_y_min = bounds_state.as_ref().map(|bs| bs.bounds_y_min).unwrap_or(0.0);
-    let bounds_y_max = bounds_state.as_ref().map(|bs| bs.bounds_y_max).unwrap_or(2.0);
-    let bounds_y_range = bounds_y_max - bounds_y_min;
+    let bounds_y_height = bounds_state.as_ref().map(|bs| bs.bounds_y_height).unwrap_or(1.0);
+    let bounds_y_min = 1.0;  // Always starts at 1.0
     
     for i in 0..PARTICLE_COUNT {
         // Simple pseudo-random distribution based on index
@@ -29,9 +28,10 @@ pub fn spawn_particles(
         let normalized_y = ((i * 13 + 3) % 100) as f32 / 100.0;
         
         // Convert normalized to world coordinates using current bounds
-        let x = normalized_x * bounds_x * 2.0 - bounds_x;
-        let z = normalized_z * bounds_z * 2.0 - bounds_z;
-        let y = bounds_y_min + normalized_y * bounds_y_range;
+        // bounds_x is now total size (diameter), so calculate: (normalized - 0.5) * total_size
+        let x = (normalized_x - 0.5) * bounds_x;
+        let z = (normalized_z - 0.5) * bounds_z;
+        let y = bounds_y_min + normalized_y * bounds_y_height;
         
         let position = Vec3::new(x, y, z);
         let entity = commands.spawn((
