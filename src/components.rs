@@ -140,6 +140,7 @@ pub struct EguiLayoutState {
     pub inspector_collapsed: bool, // Whether the inspector panel is collapsed
     pub left_half_panel_collapsed: bool, // Whether the left half panel (middle) is collapsed
     pub d3_viewer_visible: bool, // Whether the 3D viewer is visible (default: true)
+    pub plot_center_axes: bool, // Whether to center plot axes to grid dimensions (default: false)
 }
 
 impl Default for EguiLayoutState {
@@ -154,6 +155,7 @@ impl Default for EguiLayoutState {
             inspector_collapsed: false,
             left_half_panel_collapsed: true, // Start with left panel hidden
             d3_viewer_visible: true, // 3D viewer is visible by default
+            plot_center_axes: false, // Start with auto-fit axes
         }
     }
 }

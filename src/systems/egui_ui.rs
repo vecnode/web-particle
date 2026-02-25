@@ -3,6 +3,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
+use egui_plot::{Plot, PlotPoints, Line};
 use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState, GridState, ParticleBoundsState, ParticleGroupState, StreamsPanelState};
 use crate::constants::{CAMERA_FRONT_POSITION, CAMERA_TOP_POSITION, EGUI_TOP_BAR_HEIGHT, EGUI_SECOND_TOP_BAR_HEIGHT, EGUI_LEFT_PANEL_WIDTH};
 
@@ -480,7 +481,50 @@ pub fn egui_controls_ui(
                         ui.vertical(|ui| {
                             ui.heading("Middle-Left Panel");
                             ui.separator();
-                            ui.label("The 3D view is on the right half.");
+                            
+                            // Center Axis button
+                            if ui.button("Center Axis").clicked() {
+                                layout_state.plot_center_axes = !layout_state.plot_center_axes;
+                            }
+                            
+                            // Calculate available height for the plot (reserve space for heading, separator, and button)
+                            let plot_height = ui.available_height().max(200.0); // Minimum 200px height
+                            
+                            // Create a simple example plot (sine wave)
+                            let points: PlotPoints = (0..100)
+                                .map(|i| {
+                                    let x = i as f64 * 0.1;
+                                    [x, x.sin()]
+                                })
+                                .collect();
+                            
+                            // Calculate grid bounds for axis centering
+                            // Use full grid size: if grid_size = 10, show from -10 to +10 (centered at 0)
+                            let grid_size_x = grid_state.size_x as f64;
+                            let grid_size_z = grid_state.size_z as f64;
+                            
+                            // Build plot with conditional axis bounds
+                            let mut plot = Plot::new("middle_left_plot").height(plot_height);
+                            
+                            // If center axes is enabled, set axis bounds to match grid dimensions
+                            // Grid is mirrored (symmetric around 0,0), so axes should show -grid_size to +grid_size
+                            // This centers 0 in the middle and shows equal positive and negative ranges
+                            if layout_state.plot_center_axes {
+                                // Include both negative and positive bounds to center at 0,0
+                                // For grid_size = 10, this shows from -10 to +10
+                                plot = plot
+                                    .include_x(-grid_size_x)  // Negative X bound: -10 for size 10
+                                    .include_x(grid_size_x)   // Positive X bound: +10 for size 10
+                                    .include_y(-grid_size_z) // Negative Y bound: -10 for size 10
+                                    .include_y(grid_size_z);  // Positive Y bound: +10 for size 10
+                                
+                                // Also include the origin (0,0) to ensure it's visible and centered
+                                plot = plot.include_x(0.0).include_y(0.0);
+                            }
+                            
+                            plot.show(ui, |plot_ui| {
+                                plot_ui.line(Line::new("Sine Wave", points));
+                            });
                         });
                     });
                 });
