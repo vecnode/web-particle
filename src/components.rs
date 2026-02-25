@@ -139,6 +139,7 @@ pub struct EguiLayoutState {
     pub right_panel_content_width: f32, // Actual content width inside right panel (in logical pixels)
     pub inspector_collapsed: bool, // Whether the inspector panel is collapsed
     pub left_half_panel_collapsed: bool, // Whether the left half panel (middle) is collapsed
+    pub d3_viewer_visible: bool, // Whether the 3D viewer is visible (default: true)
 }
 
 impl Default for EguiLayoutState {
@@ -152,6 +153,7 @@ impl Default for EguiLayoutState {
             right_panel_content_width: 0.0,
             inspector_collapsed: false,
             left_half_panel_collapsed: true, // Start with left panel hidden
+            d3_viewer_visible: true, // 3D viewer is visible by default
         }
     }
 }

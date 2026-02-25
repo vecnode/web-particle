@@ -154,22 +154,32 @@ fn update_camera_viewports(
     let total_viewport_width = viewport_right_edge.saturating_sub(left_panel_end_physical);
     let viewport_height = physical_size.y.saturating_sub(top_bars_height_physical).saturating_sub(bottom_bar_height_physical);
     
-    // Calculate camera viewport: if left half panel is visible, use right 50%, otherwise use full width
-    let (camera_viewport_x, camera_viewport_width) = if layout_state.left_half_panel_collapsed {
-        // Left panel is hidden: 3D world uses full width
-        (left_panel_end_physical, total_viewport_width)
-    } else {
-        // Left panel is visible: 3D world uses right half (50% width)
-        let half_width = total_viewport_width / 2;
-        (left_panel_end_physical + half_width, half_width)
-    };
-    
-    // Camera viewport (right half when left panel visible, full width when left panel hidden)
+    // Calculate camera viewport: if 3D viewer is hidden, set size to 0; otherwise calculate based on left panel
     if let Ok(mut camera) = right_camera.single_mut() {
-        camera.viewport = Some(Viewport {
-            physical_position: UVec2::new(camera_viewport_x, top_bars_height_physical),
-            physical_size: UVec2::new(camera_viewport_width, viewport_height),
-            ..default()
-        });
+        if !layout_state.d3_viewer_visible {
+            // Hide 3D viewer by setting viewport size to 0
+            camera.viewport = Some(Viewport {
+                physical_position: UVec2::new(0, 0),
+                physical_size: UVec2::new(0, 0),
+                ..default()
+            });
+        } else {
+            // Calculate camera viewport: if left half panel is visible, use right 50%, otherwise use full width
+            let (camera_viewport_x, camera_viewport_width) = if layout_state.left_half_panel_collapsed {
+                // Left panel is hidden: 3D world uses full width
+                (left_panel_end_physical, total_viewport_width)
+            } else {
+                // Left panel is visible: 3D world uses right half (50% width)
+                let half_width = total_viewport_width / 2;
+                (left_panel_end_physical + half_width, half_width)
+            };
+            
+            // Camera viewport (right half when left panel visible, full width when left panel hidden)
+            camera.viewport = Some(Viewport {
+                physical_position: UVec2::new(camera_viewport_x, top_bars_height_physical),
+                physical_size: UVec2::new(camera_viewport_width, viewport_height),
+                ..default()
+            });
+        }
     }
 }

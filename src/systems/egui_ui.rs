@@ -305,7 +305,7 @@ pub fn egui_controls_ui(
                         // Add 5px left margin for the button
                         ui.add_space(5.0);
                         // Button with normal frame to make it visible (not frame(false))
-                        if ui.button("3D Viewer").clicked() {
+                        if ui.button("Workspace").clicked() {
                             streams_panel_state.is_visible = false;
                         }
                         // Add spacing between buttons
@@ -358,13 +358,18 @@ pub fn egui_controls_ui(
                     ui.add_space(2.0); // Add 2px vertical offset (couple pixels down)
                     // Use the same layout approach as the second top bar - no margins
                     ui.horizontal(|ui| {
-                        // Add 5px left margin for the button
-                        // Add spacing between buttons
-                        ui.add_space(5.0);
-                        // Left Panel toggle button
-                        if ui.button("Middle-Left Panel").clicked() {
-                            layout_state.left_half_panel_collapsed = !layout_state.left_half_panel_collapsed;
-                        }
+                    // Add 5px left margin for the button
+                    // Add spacing between buttons
+                    ui.add_space(5.0);
+                    // 3D Viewer toggle button
+                    if ui.button("3D Viewer").clicked() {
+                        layout_state.d3_viewer_visible = !layout_state.d3_viewer_visible;
+                    }
+                    ui.add_space(5.0);
+                    // Left Panel toggle button
+                    if ui.button("Middle-Left Panel").clicked() {
+                        layout_state.left_half_panel_collapsed = !layout_state.left_half_panel_collapsed;
+                    }
                         ui.add_space(5.0);
                         // Button with normal frame to make it visible (not frame(false))
                         if ui.button("Inspector").clicked() {
@@ -429,6 +434,7 @@ pub fn egui_controls_ui(
         }
         
         // Left half panel - divides the 3D world space vertically (left 50%, full height)
+        // When 3D viewer is hidden, takes full width instead of 50%
         // Only show if not collapsed (toggled by button in bottom bar)
         if !layout_state.left_half_panel_collapsed {
             let viewport_rect = ctx.viewport_rect();
@@ -439,15 +445,20 @@ pub fn egui_controls_ui(
                 layout_state.right_panel_start_x // Stop at inspector when visible
             };
             
-            // Calculate total available width and divide in half
+            // Calculate total available width
             let total_viewport_width = viewport_right_edge - left_panel_end_x;
-            let half_width = total_viewport_width / 2.0;
+            // If 3D viewer is hidden, panel takes full width; otherwise takes 50%
+            let panel_width = if !layout_state.d3_viewer_visible {
+                total_viewport_width // Full width when 3D viewer is hidden
+            } else {
+                total_viewport_width / 2.0 // Half width when 3D viewer is visible
+            };
             let panel_y = layout_state.top_bars_height; // Start below top bars
             let panel_height = viewport_rect.height() - layout_state.top_bars_height - layout_state.bottom_bar_height; // Full height minus bars
             
             let left_half_panel_rect = egui::Rect::from_min_size(
                 egui::pos2(left_panel_end_x, panel_y),
-                egui::vec2(half_width, panel_height)
+                egui::vec2(panel_width, panel_height)
             );
             
             egui::Area::new(egui::Id::new("left_half_panel"))
@@ -498,12 +509,14 @@ pub fn egui_controls_ui(
                 .fixed_pos(streams_panel_rect.min)
                 .constrain(true)
                 .interactable(true)
+                .order(egui::Order::Foreground) // Render on top instantly, no transitions
                 .show(ctx, |ui| {
                     // Allocate rect to intercept clicks and block 3D world input
                     let _response = ui.allocate_rect(streams_panel_rect, egui::Sense::click());
                     
-                    // Paint background to fully cover the 3D viewport
-                    ui.painter().rect_filled(streams_panel_rect, 0.0, ui.style().visuals.panel_fill);
+                    // Paint background to fully cover the 3D viewport - use fixed color for instant appearance
+                    let panel_color = ui.style().visuals.panel_fill;
+                    ui.painter().rect_filled(streams_panel_rect, 0.0, panel_color);
                     
                     // Set clip rect to constrain content
                     ui.set_clip_rect(streams_panel_rect);
