@@ -47,10 +47,10 @@ fn main() {
         .init_resource::<components::ParticleBoundsState>()
         .init_resource::<components::ParticleGroupState>()
         .init_resource::<components::StreamsPanelState>()
+        .init_resource::<components::ParticleCreationState>()
         .add_systems(
             Startup,
             (
-                spawn_particles,
                 spawn_axes,
                 spawn_grid,
                 setup_camera_and_lights,
@@ -71,6 +71,8 @@ fn main() {
                 handle_right_mouse_button,
                 update_selection_box_visual,
                 process_selection_box,
+                handle_particle_creation,
+                handle_particle_removal,
             ),
         )
         .add_systems(

@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use egui_plot::{Plot, PlotPoints, Line};
-use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState, GridState, ParticleBoundsState, ParticleGroupState, StreamsPanelState};
+use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState, GridState, ParticleBoundsState, ParticleGroupState, StreamsPanelState, ParticleCreationState, ParticlePlacementMode};
 use crate::constants::{CAMERA_FRONT_POSITION, CAMERA_TOP_POSITION, EGUI_TOP_BAR_HEIGHT, EGUI_SECOND_TOP_BAR_HEIGHT, EGUI_LEFT_PANEL_WIDTH};
 
 pub fn egui_controls_ui(
@@ -19,6 +19,7 @@ pub fn egui_controls_ui(
     mut particle_bounds_state: ResMut<ParticleBoundsState>,
     mut particle_group_state: ResMut<ParticleGroupState>,
     mut streams_panel_state: ResMut<StreamsPanelState>,
+    mut creation_state: ResMut<ParticleCreationState>,
     mut queries: ParamSet<(
         Query<(Entity, &mut Transform, &mut GlobalTransform, &mut Projection), (With<bevy::prelude::Camera3d>, With<crate::plugins::viewport_constrained_camera::ViewportConstrainedCamera>, With<crate::components::RightCamera>)>,
         Query<&Transform, With<crate::components::Particle>>,
@@ -56,9 +57,13 @@ pub fn egui_controls_ui(
                 let left_panel_content_width = ui.available_width();
                 layout_state.left_panel_content_width = left_panel_content_width;
                 
-                ui.vertical(|ui| {
-                    ui.heading("Controls");
-                    ui.separator();
+                // Add scroll area for vertical overflow
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        ui.vertical(|ui| {
+                            ui.heading("Controls");
+                            ui.separator();
                     
                     // Camera controls section
                     ui.label("Camera Controls");
@@ -122,6 +127,130 @@ pub fn egui_controls_ui(
                     
                     ui.separator();
                     ui.label(format!("Particles Selected: {}", selection_state.selected_particles.len()));
+
+                    // Particle Creation section
+                    ui.separator();
+                    ui.label("Particle Creation");
+                    
+                    // Placement mode selection
+                    ui.horizontal(|ui| {
+                        ui.label("Mode:");
+                        ui.radio_value(&mut creation_state.placement_mode, ParticlePlacementMode::Random, "Random");
+                        ui.radio_value(&mut creation_state.placement_mode, ParticlePlacementMode::Ball, "Ball");
+                        ui.radio_value(&mut creation_state.placement_mode, ParticlePlacementMode::Cube, "Cube");
+                    });
+                    
+                    // Batch count
+                    ui.horizontal(|ui| {
+                        ui.label("Count:");
+                        if ui.add(egui::DragValue::new(&mut creation_state.batch_count)
+                            .range(1..=100)
+                            .speed(1)).changed() {
+                            // Value updated
+                        }
+                    });
+                    
+                    // Create button
+                    if ui.button("Create Particles").clicked() {
+                        creation_state.create_requested = true;
+                    }
+                    
+                    // Remove buttons
+                    ui.horizontal(|ui| {
+                        let has_selected = !selection_state.selected_particles.is_empty();
+                        if ui.add_enabled(has_selected, egui::Button::new("Remove Selected")).clicked() {
+                            creation_state.remove_selected_requested = true;
+                        }
+                        if ui.button("Remove All").clicked() {
+                            creation_state.remove_all_requested = true;
+                        }
+                    });
+                    
+                    // Ball mode parameters
+                    if creation_state.placement_mode == ParticlePlacementMode::Ball {
+                        ui.separator();
+                        ui.label("Ball Parameters");
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Center X:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.ball_center.x)
+                                .range(-50.0..=50.0)
+                                .speed(0.1)).changed() {}
+                        });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Center Y:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.ball_center.y)
+                                .range(0.0..=20.0)
+                                .speed(0.1)).changed() {}
+                        });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Center Z:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.ball_center.z)
+                                .range(-50.0..=50.0)
+                                .speed(0.1)).changed() {}
+                        });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Radius:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.ball_radius)
+                                .range(0.1..=10.0)
+                                .speed(0.1)
+                                .suffix(" m")).changed() {}
+                        });
+                    }
+                    
+                    // Cube mode parameters
+                    if creation_state.placement_mode == ParticlePlacementMode::Cube {
+                        ui.separator();
+                        ui.label("Cube Parameters");
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Center X:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.cube_center.x)
+                                .range(-50.0..=50.0)
+                                .speed(0.1)).changed() {}
+                        });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Center Y:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.cube_center.y)
+                                .range(0.0..=20.0)
+                                .speed(0.1)).changed() {}
+                        });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Center Z:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.cube_center.z)
+                                .range(-50.0..=50.0)
+                                .speed(0.1)).changed() {}
+                        });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Size X:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.cube_size.x)
+                                .range(0.1..=20.0)
+                                .speed(0.1)
+                                .suffix(" m")).changed() {}
+                        });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Size Y:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.cube_size.y)
+                                .range(0.1..=20.0)
+                                .speed(0.1)
+                                .suffix(" m")).changed() {}
+                        });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label("Size Z:");
+                            if ui.add(egui::DragValue::new(&mut creation_state.cube_size.z)
+                                .range(0.1..=20.0)
+                                .speed(0.1)
+                                .suffix(" m")).changed() {}
+                        });
+                    }
 
                     // Grid controls section
                     ui.label("Grid Size (meters)");
@@ -236,8 +365,9 @@ pub fn egui_controls_ui(
                         trajectory_state.is_visible = !trajectory_state.is_visible;
                     }
                     
-                });
-            });
+                        }); // Close vertical layout
+                    }); // Close ScrollArea
+            }); // Close SidePanel
         
         // Second top bar (starts at x=200, fills to right panel, right under first top bar)
         // SOLUTION: After SidePanels are shown, available_rect() gives the content area (excluding panels)

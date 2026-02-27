@@ -186,3 +186,41 @@ impl Default for GridState {
         }
     }
 }
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ParticlePlacementMode {
+    Random,
+    Ball,
+    Cube,
+}
+
+#[derive(Resource)]
+pub struct ParticleCreationState {
+    pub placement_mode: ParticlePlacementMode,
+    pub batch_count: usize,
+    pub ball_center: Vec3,
+    pub ball_radius: f32,
+    pub cube_center: Vec3,
+    pub cube_size: Vec3,
+    pub y_min: f32,
+    pub create_requested: bool,
+    pub remove_selected_requested: bool,
+    pub remove_all_requested: bool,
+}
+
+impl Default for ParticleCreationState {
+    fn default() -> Self {
+        Self {
+            placement_mode: ParticlePlacementMode::Random,
+            batch_count: 10,
+            ball_center: Vec3::new(0.0, 1.5, 0.0),
+            ball_radius: 2.0,
+            cube_center: Vec3::new(0.0, 1.5, 0.0),
+            cube_size: Vec3::new(2.0, 1.0, 2.0),
+            y_min: 1.0,
+            create_requested: false,
+            remove_selected_requested: false,
+            remove_all_requested: false,
+        }
+    }
+}
