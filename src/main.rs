@@ -48,6 +48,7 @@ fn main() {
         .init_resource::<components::ParticleGroupState>()
         .init_resource::<components::StreamsPanelState>()
         .init_resource::<components::ParticleCreationState>()
+        .init_resource::<components::SelectionTransformState>()
         .add_systems(
             Startup,
             (
@@ -66,6 +67,8 @@ fn main() {
                 update_particle_bounds,
                 update_particle_group_transform,
                 handle_particle_selection,
+                update_selection_original_positions,
+                update_selection_transform,
                 animate_motion1_particles,
                 update_trajectory_visualization,
                 handle_right_mouse_button,
@@ -73,6 +76,7 @@ fn main() {
                 process_selection_box,
                 handle_particle_creation,
                 handle_particle_removal,
+                update_selection_bounding_box,
             ),
         )
         .add_systems(

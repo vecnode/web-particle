@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use egui_plot::{Plot, PlotPoints, Line};
-use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState, GridState, ParticleBoundsState, ParticleGroupState, StreamsPanelState, ParticleCreationState, ParticlePlacementMode};
+use crate::components::{ParticleSelectionState, Motion1State, TrajectoryState, CameraViewChanged, CameraProjectionState, EguiLayoutState, GridState, ParticleBoundsState, ParticleGroupState, StreamsPanelState, ParticleCreationState, ParticlePlacementMode, InMotion, SelectionTransformState};
 use crate::constants::{CAMERA_FRONT_POSITION, CAMERA_TOP_POSITION, EGUI_TOP_BAR_HEIGHT, EGUI_SECOND_TOP_BAR_HEIGHT, EGUI_LEFT_PANEL_WIDTH};
 
 pub fn egui_controls_ui(
@@ -16,13 +16,17 @@ pub fn egui_controls_ui(
     mut projection_state: ResMut<CameraProjectionState>,
     mut layout_state: ResMut<EguiLayoutState>,
     mut grid_state: ResMut<GridState>,
-    mut particle_bounds_state: ResMut<ParticleBoundsState>,
-    mut particle_group_state: ResMut<ParticleGroupState>,
+    mut _particle_bounds_state: ResMut<ParticleBoundsState>,
+    mut _particle_group_state: ResMut<ParticleGroupState>,
     mut streams_panel_state: ResMut<StreamsPanelState>,
     mut creation_state: ResMut<ParticleCreationState>,
+    mut selection_transform_state: ResMut<SelectionTransformState>,
+    mut commands: Commands,
     mut queries: ParamSet<(
         Query<(Entity, &mut Transform, &mut GlobalTransform, &mut Projection), (With<bevy::prelude::Camera3d>, With<crate::plugins::viewport_constrained_camera::ViewportConstrainedCamera>, With<crate::components::RightCamera>)>,
         Query<&Transform, With<crate::components::Particle>>,
+        Query<Entity, (With<crate::components::Particle>, With<InMotion>)>,
+        Query<Entity, With<crate::components::Particle>>,
     )>,
 ) {
     if let Ok(ctx) = contexts.ctx_mut() {
@@ -277,86 +281,120 @@ pub fn egui_controls_ui(
                     
                     
                     
-                    // Particle bounds controls section
-                    ui.label("Particle Distribution Area (meters)");
+                    // Selection position offset controls section
+                    ui.label("Selection Distribution Area (meters)");
                     
-                    // X bounds input
-                    let mut bounds_x = particle_bounds_state.bounds_x;
-                    if ui.add(egui::DragValue::new(&mut bounds_x)
-                        .range(1.0..=100.0)
-                        .speed(0.5)
-                        .prefix("X: ")
-                        .suffix(" m")).changed() {
-                        particle_bounds_state.bounds_x = bounds_x.max(0.1);
-                    }
-                    
-                    // Z bounds input
-                    let mut bounds_z = particle_bounds_state.bounds_z;
-                    if ui.add(egui::DragValue::new(&mut bounds_z)
-                        .range(1.0..=100.0)
-                        .speed(0.5)
-                        .prefix("Z: ")
-                        .suffix(" m")).changed() {
-                        particle_bounds_state.bounds_z = bounds_z.max(0.1);
-                    }
-                    
-                    // Y Height input (starts at 1.0, extends upward)
-                    let mut bounds_y_height = particle_bounds_state.bounds_y_height;
-                    if ui.add(egui::DragValue::new(&mut bounds_y_height)
-                        .range(0.1..=50.0)
-                        .speed(0.1)
-                        .prefix("Y: ")
-                        .suffix(" m")).changed() {
-                        particle_bounds_state.bounds_y_height = bounds_y_height.max(0.1);
-                    }
-                    
-                    
-                    // Particle group controls section
-                    ui.label("Particle Transform All");
-                    
-                    // Group offset inputs
-                    let mut offset_x = particle_group_state.offset.x;
+                    // Position offset X
+                    let mut offset_x = selection_transform_state.position_offset.x;
                     if ui.add(egui::DragValue::new(&mut offset_x)
                         .range(-100.0..=100.0)
                         .speed(0.5)
-                        .prefix("Offset X: ")
+                        .prefix("X: ")
                         .suffix(" m")).changed() {
-                        particle_group_state.offset.x = offset_x;
+                        selection_transform_state.position_offset.x = offset_x;
                     }
                     
-                    let mut offset_y = particle_group_state.offset.y;
+                    // Position offset Y
+                    let mut offset_y = selection_transform_state.position_offset.y;
                     if ui.add(egui::DragValue::new(&mut offset_y)
                         .range(-100.0..=100.0)
                         .speed(0.5)
-                        .prefix("Offset Y: ")
+                        .prefix("Y: ")
                         .suffix(" m")).changed() {
-                        particle_group_state.offset.y = offset_y;
+                        selection_transform_state.position_offset.y = offset_y;
                     }
                     
-                    let mut offset_z = particle_group_state.offset.z;
+                    // Position offset Z
+                    let mut offset_z = selection_transform_state.position_offset.z;
                     if ui.add(egui::DragValue::new(&mut offset_z)
                         .range(-100.0..=100.0)
                         .speed(0.5)
-                        .prefix("Offset Z: ")
+                        .prefix("Z: ")
                         .suffix(" m")).changed() {
-                        particle_group_state.offset.z = offset_z;
+                        selection_transform_state.position_offset.z = offset_z;
                     }
                     
-                    // Group scale input
-                    let mut scale = particle_group_state.scale;
-                    if ui.add(egui::Slider::new(&mut scale, 0.1..=5.0)
-                        .text("Scale")
+                    
+                    // Selection scale controls section
+                    ui.label("Selection Transform");
+                    
+                    // Scale X (normal distribution)
+                    let mut scale_x = selection_transform_state.scale.x;
+                    if ui.add(egui::Slider::new(&mut scale_x, 0.1..=5.0)
+                        .text("Scale X")
                         .step_by(0.1)).changed() {
-                        particle_group_state.scale = scale;
+                        selection_transform_state.scale.x = scale_x;
+                    }
+                    
+                    // Scale Y (normal distribution)
+                    let mut scale_y = selection_transform_state.scale.y;
+                    if ui.add(egui::Slider::new(&mut scale_y, 0.1..=5.0)
+                        .text("Scale Y")
+                        .step_by(0.1)).changed() {
+                        selection_transform_state.scale.y = scale_y;
+                    }
+                    
+                    // Scale Z (normal distribution)
+                    let mut scale_z = selection_transform_state.scale.z;
+                    if ui.add(egui::Slider::new(&mut scale_z, 0.1..=5.0)
+                        .text("Scale Z")
+                        .step_by(0.1)).changed() {
+                        selection_transform_state.scale.z = scale_z;
                     }
                     
                    
                     ui.separator();
                     
                     // Motion 1 button
-                    let motion1_label = if motion1_state.is_active { "Motion 1 (Active)" } else { "Motion 1" };
+                    // Check if any particles are in motion to determine button label
+                    let particles_with_motion: std::collections::HashSet<Entity> = queries.p2().iter().collect();
+                    let particles_in_motion = particles_with_motion.len();
+                    let motion1_label = if particles_in_motion > 0 { 
+                        format!("Motion 1 (Active: {})", particles_in_motion) 
+                    } else { 
+                        "Motion 1".to_string() 
+                    };
                     if ui.button(motion1_label).clicked() {
-                        motion1_state.is_active = !motion1_state.is_active;
+                        // If particles are selected, toggle motion only for selected particles
+                        // If no particles are selected, toggle motion for all particles
+                        if !selection_state.selected_particles.is_empty() {
+                            // Toggle InMotion component for selected particles only
+                            for entity in selection_state.selected_particles.iter() {
+                                if particles_with_motion.contains(entity) {
+                                    // Remove InMotion component (stop motion)
+                                    commands.entity(*entity).remove::<InMotion>();
+                                } else {
+                                    // Add InMotion component (start motion)
+                                    commands.entity(*entity).insert(InMotion);
+                                }
+                            }
+                            // Update is_active: true if any particles (selected or not) will be in motion after toggle
+                            let selected_in_motion_before = selection_state.selected_particles.iter()
+                                .filter(|e| particles_with_motion.contains(e))
+                                .count();
+                            let non_selected_in_motion = particles_with_motion.len() - selected_in_motion_before;
+                            let selected_in_motion_after = selection_state.selected_particles.len() - selected_in_motion_before;
+                            motion1_state.is_active = (non_selected_in_motion + selected_in_motion_after) > 0;
+                        } else {
+                            // No selection: toggle motion for all particles
+                            let all_particles: Vec<Entity> = queries.p3().iter().collect();
+                            
+                            if particles_with_motion.len() == all_particles.len() {
+                                // All particles are in motion: stop all
+                                for entity in all_particles {
+                                    commands.entity(entity).remove::<InMotion>();
+                                }
+                                motion1_state.is_active = false;
+                            } else {
+                                // Not all particles are in motion: start all
+                                for entity in all_particles {
+                                    if !particles_with_motion.contains(&entity) {
+                                        commands.entity(entity).insert(InMotion);
+                                    }
+                                }
+                                motion1_state.is_active = true;
+                            }
+                        }
                     }
                     
                     // Show Trajectory button

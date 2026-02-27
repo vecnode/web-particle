@@ -9,6 +9,12 @@ pub struct Particle;
 #[derive(Component)]
 pub struct Selected;
 
+#[derive(Component)]
+pub struct InMotion;
+
+#[derive(Component)]
+pub struct SelectionBoundingBox;
+
 #[derive(Resource, Default)]
 pub struct CameraViewChanged {
     pub needs_reset: bool,
@@ -50,6 +56,27 @@ impl Default for ParticleBoundsState {
             previous_bounds_x: 10.0,
             previous_bounds_z: 10.0,
             previous_bounds_y_height: 1.0,
+        }
+    }
+}
+
+#[derive(Resource)]
+pub struct SelectionTransformState {
+    pub position_offset: Vec3,  // XYZ position offset for selected particles
+    pub scale: Vec3,  // XYZ scale for selected particles (normal distribution)
+    pub previous_position_offset: Vec3,
+    pub previous_scale: Vec3,
+    pub original_selection_positions: std::collections::HashMap<Entity, Vec3>,  // Store original positions when selection changes
+}
+
+impl Default for SelectionTransformState {
+    fn default() -> Self {
+        Self {
+            position_offset: Vec3::ZERO,
+            scale: Vec3::ONE,
+            previous_position_offset: Vec3::ZERO,
+            previous_scale: Vec3::ONE,
+            original_selection_positions: std::collections::HashMap::new(),
         }
     }
 }

@@ -10,6 +10,8 @@ pub mod egui_ui;
 pub mod mouse;
 pub mod grid;
 pub mod particle_creation;
+pub mod selection_bounds;
+pub mod selection_transform;
 
 pub use camera::reset_viewport_constrained_camera_after_view_change;
 pub use particles::*;
@@ -18,11 +20,13 @@ pub use egui_ui::egui_controls_ui;
 pub use mouse::*;
 pub use grid::update_grid_dimensions;
 pub use particle_creation::*;
+pub use selection_bounds::update_selection_bounding_box;
+pub use selection_transform::{update_selection_original_positions, update_selection_transform};
 
 pub fn animate_motion1_particles(
     time: Res<Time>,
     motion1_state: Res<crate::components::Motion1State>,
-    mut particle_query: Query<(Entity, &mut Transform), With<crate::components::Particle>>,
+    mut particle_query: Query<(Entity, &mut Transform), (With<crate::components::Particle>, With<crate::components::InMotion>)>,
     mut particle_positions: ResMut<crate::components::ParticlePositions>,
     group_state: Res<crate::components::ParticleGroupState>,
 ) {
@@ -37,7 +41,7 @@ pub fn animate_motion1_particles(
     // Motion rotates around the group offset center, not world origin
     let rotation_center = Vec3::new(group_state.offset.x, 0.0, group_state.offset.z);
     
-    // Apply motion to ALL particles when motion is active, not just selected ones
+    // Apply motion only to particles with InMotion component
     for (entity, mut transform) in particle_query.iter_mut() {
         let current_pos = transform.translation;
         

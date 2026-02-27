@@ -3,50 +3,6 @@
 
 use bevy::prelude::*;
 use crate::constants::*;
-use crate::components::{Particle, ParticlePositions};
-
-pub fn spawn_particles(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut particle_positions: ResMut<ParticlePositions>,
-    bounds_state: Option<Res<crate::components::ParticleBoundsState>>,
-) {
-    let white_material = materials.add(COLOR_WHITE);
-    
-    // Get bounds from resource or use defaults
-    let bounds_x = bounds_state.as_ref().map(|bs| bs.bounds_x).unwrap_or(PARTICLE_GRID_BOUNDS);
-    let bounds_z = bounds_state.as_ref().map(|bs| bs.bounds_z).unwrap_or(PARTICLE_GRID_BOUNDS);
-    let bounds_y_height = bounds_state.as_ref().map(|bs| bs.bounds_y_height).unwrap_or(1.0);
-    let bounds_y_min = 1.0;  // Always starts at 1.0
-    
-    for i in 0..PARTICLE_COUNT {
-        // Simple pseudo-random distribution based on index
-        // Generate normalized positions (0-1 range)
-        let normalized_x = ((i * 17 + 7) % 100) as f32 / 100.0;
-        let normalized_z = ((i * 23 + 11) % 100) as f32 / 100.0;
-        let normalized_y = ((i * 13 + 3) % 100) as f32 / 100.0;
-        
-        // Convert normalized to world coordinates using current bounds
-        // bounds_x is now total size (diameter), so calculate: (normalized - 0.5) * total_size
-        let x = (normalized_x - 0.5) * bounds_x;
-        let z = (normalized_z - 0.5) * bounds_z;
-        let y = bounds_y_min + normalized_y * bounds_y_height;
-        
-        let position = Vec3::new(x, y, z);
-        let entity = commands.spawn((
-            Mesh3d(meshes.add(Sphere::new(PARTICLE_RADIUS))),
-            MeshMaterial3d(white_material.clone()),
-            Transform::from_translation(position),
-            Particle,
-        )).id();
-        
-        // Store normalized base position (for resizing) and current world position
-        let base_position = Vec3::new(normalized_x, normalized_y, normalized_z);
-        particle_positions.base_positions.insert(entity, base_position);
-        particle_positions.current_positions.insert(entity, position);
-    }
-}
 
 pub fn spawn_axes(
     mut commands: Commands,
