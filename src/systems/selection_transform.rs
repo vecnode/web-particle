@@ -4,20 +4,33 @@
 use bevy::prelude::*;
 use crate::components::{ParticleSelectionState, SelectionTransformState, Particle, ParticlePositions};
 
-/// System to update original positions when selection changes
+/// System to update original positions when selection changes and reset transforms
 pub fn update_selection_original_positions(
     mut transform_state: ResMut<SelectionTransformState>,
     selection_state: Res<ParticleSelectionState>,
     particle_query: Query<(Entity, &Transform), With<Particle>>,
     mut particle_positions: ResMut<ParticlePositions>,
 ) {
-    // Check if selection changed by comparing current selection with stored original positions
-    let current_selection: std::collections::HashSet<Entity> = selection_state.selected_particles.iter().copied().collect();
-    let stored_selection: std::collections::HashSet<Entity> = transform_state.original_selection_positions.keys().copied().collect();
+    // Create a hash of the current selection to detect changes
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    let mut sorted_entities: Vec<Entity> = selection_state.selected_particles.iter().copied().collect();
+    sorted_entities.sort();
+    sorted_entities.hash(&mut hasher);
+    let current_selection_hash = hasher.finish();
     
-    if current_selection != stored_selection {
-        // Selection changed - update original positions
+    // Check if selection changed
+    if current_selection_hash != transform_state.previous_selection_hash {
+        // Selection changed - update original positions and reset transforms
         transform_state.original_selection_positions.clear();
+        transform_state.previous_selection_hash = current_selection_hash;
+        
+        // Reset transform values to defaults when selection changes
+        transform_state.position_offset = Vec3::ZERO;
+        transform_state.scale = Vec3::ONE;
+        transform_state.previous_position_offset = Vec3::ZERO;
+        transform_state.previous_scale = Vec3::ONE;
         
         for entity in selection_state.selected_particles.iter() {
             if let Ok((_, transform)) = particle_query.get(*entity) {
@@ -32,19 +45,21 @@ pub fn update_selection_original_positions(
 }
 
 /// System to apply position offset and scale to selected particles only
+/// This always runs to ensure transforms are applied whenever selection or values change
 pub fn update_selection_transform(
     mut particle_query: Query<(Entity, &mut Transform), With<Particle>>,
     mut transform_state: ResMut<SelectionTransformState>,
     mut particle_positions: ResMut<ParticlePositions>,
     selection_state: Res<ParticleSelectionState>,
 ) {
-    // Check if transform changed
-    if transform_state.position_offset != transform_state.previous_position_offset ||
-       transform_state.scale != transform_state.previous_scale {
-        
-        // Update previous values
-        transform_state.previous_position_offset = transform_state.position_offset;
-        transform_state.previous_scale = transform_state.scale;
+    // Always apply transforms if there are selected particles with stored original positions
+    if !selection_state.selected_particles.is_empty() && !transform_state.original_selection_positions.is_empty() {
+        // Update previous values if they changed (for change detection)
+        if transform_state.position_offset != transform_state.previous_position_offset ||
+           transform_state.scale != transform_state.previous_scale {
+            transform_state.previous_position_offset = transform_state.position_offset;
+            transform_state.previous_scale = transform_state.scale;
+        }
         
         // Calculate center from original positions
         let mut center = Vec3::ZERO;

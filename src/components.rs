@@ -67,6 +67,7 @@ pub struct SelectionTransformState {
     pub previous_position_offset: Vec3,
     pub previous_scale: Vec3,
     pub original_selection_positions: std::collections::HashMap<Entity, Vec3>,  // Store original positions when selection changes
+    pub previous_selection_hash: u64,  // Hash of selection to detect changes
 }
 
 impl Default for SelectionTransformState {
@@ -77,6 +78,7 @@ impl Default for SelectionTransformState {
             previous_position_offset: Vec3::ZERO,
             previous_scale: Vec3::ONE,
             original_selection_positions: std::collections::HashMap::new(),
+            previous_selection_hash: 0,
         }
     }
 }
