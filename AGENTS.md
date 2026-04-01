@@ -1,12 +1,23 @@
-# Project Instructions
+# AGENTS.md
 
-## Code Style
+Defines available AI agents, their responsibilities, and operational guidelines.
 
-- Do not create new Markdown files explaining your solutions and logic unless asked
-- Do not add emojis to the codebase
-- When asked for a plan and not edit code answer only in writing before proceeding with edits and commands
-- When you implement plans and solutions respect the codebase and structure
+## Agent Guidelines
 
-## Architecture
+- **No New Documentation:** Do not create Markdown files explaining solutions unless explicitly requested.
+- **No Emojis:** Maintain clean, professional code without emojis or strings like "...".
+- **Planning Protocol:** When asked for plans (without code edits), respond in writing only before proceeding.
+- **Code Respect:** Always preserve existing codebase structure and patterns during implementation.
+- **Database Respect:** Always preserve existing database structure and patterns during implementation.
 
-- Follow the repository pattern
+#### General Guidelines 
+
+- **Scoped Changes:** Keep pull requests focused, avoiding unrelated refactors in the same commit.
+- **Testing Requirement:** Run relevant checks and tests before proposing or applying code changes.
+- **Clear Commits:** Write concise, descriptive commit messages that explain the purpose of each change.
+- **Review Friendly:** Prefer small, incremental changes that are easy to review and reason about.
+- **Security & Safety:** Avoid introducing unsafe patterns or dependencies without explicit justification.
+- **Configurability:** Respect existing configuration, feature flags, and environment settings.
+- **Documentation Updates:** When behavior changes, update comments and in-code documentation accordingly.
+- **User Experience:** Preserve or improve existing UX patterns, layouts, and interaction flows.
+- **Reversibility:** Structure changes so they can be reverted cleanly if needed.
